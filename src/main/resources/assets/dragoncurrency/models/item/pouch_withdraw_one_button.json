@@ -1,0 +1,4 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": { "layer0": "dragoncurrency:item/pouch_withdraw_one_button" }
+}

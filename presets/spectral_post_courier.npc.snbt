@@ -1,0 +1,88 @@
+{
+  PresetMetadata:{
+    author:"CyberSpectra",
+    category:"General",
+    created:1788602696257L,
+    description:"Official Season 2 Spectral Mail postman preset using the bundled server-pack courier skin, natural postal dialogue and operator-safe one-click courier binding.",
+    entityTypeId:"easy_npc:humanoid",
+    modified:1788602696257L,
+    name:"Spectral Post Courier",
+    variantType:"STEVE",
+    version:"1.1.0"
+  },
+  data:{
+    ActionData:{
+      ActionEventSet:{
+        ON_INTERACTION:[{
+          Type:"OPEN_DEFAULT_DIALOG"
+        }]
+      }
+    },
+    CustomName:'{"color":"#F0D9A6","text":"Postman"}',
+    DialogData:{
+      DialogDataSet:[{
+        Buttons:[{
+          Actions:[{Cmd:"post_info",Type:"OPEN_NAMED_DIALOG"}],
+          Label:"post_info_button",
+          Name:"How does the post work?"
+        },{
+          Actions:[{Cmd:"delivery_info",Type:"OPEN_NAMED_DIALOG"}],
+          Label:"delivery_info_button",
+          Name:"Where do you deliver letters?"
+        },{
+          Actions:[{Cmd:"courier_setup",Type:"OPEN_NAMED_DIALOG"}],
+          Label:"courier_setup_button",
+          Name:"Post Office setup."
+        },{
+          Actions:[{Cmd:"farewell",Type:"OPEN_NAMED_DIALOG"}],
+          Label:"farewell_button",
+          Name:"Nothing today."
+        }],
+        Label:"greeting",
+        Name:"Postman Greeting",
+        Priority:10,
+        Texts:[{Text:"Morning, @initiator. Letters do not deliver themselves. What can I help you with?"},{Text:"Good day, @initiator. The Post Office is open, and I have roads to walk."},{Text:"Ah, @initiator. Sending something across the realm? I can point you the right way."}]
+      },{
+        Buttons:[{Actions:[{Cmd:"delivery_info",Type:"OPEN_NAMED_DIALOG"}],Label:"post_delivery",Name:"Where will it be delivered?"},{Actions:[{Cmd:"greeting",Type:"OPEN_NAMED_DIALOG"}],Label:"post_back",Name:"Back."}],
+        Label:"post_info",
+        Name:"Using the Post",
+        Priority:-1,
+        Texts:[{Text:"Hold Letter Paper, address it to a player, then put the addressed letter into one of the red Drop Boxes. I will collect it from the front of the box and carry it on from there."}]
+      },{
+        Buttons:[{Actions:[{Cmd:"post_info",Type:"OPEN_NAMED_DIALOG"}],Label:"delivery_post",Name:"How do I send one?"},{Actions:[{Cmd:"greeting",Type:"OPEN_NAMED_DIALOG"}],Label:"delivery_back",Name:"Back."}],
+        Label:"delivery_info",
+        Name:"Delivery Rules",
+        Priority:-1,
+        Texts:[{Text:"If the recipient has a registered Letter Box, that is their postal address and I will take the letter there first. If their box cannot be used, I will try to find the player instead. Nothing gets thrown away if a route fails."}]
+      },{
+        Buttons:[{
+          Actions:[{Cmd:"/mail courierpresetbind @initiator",Type:"COMMAND"}],
+          Label:"bind_courier",
+          Name:"Bind this NPC as the courier."
+        },{Actions:[{Cmd:"greeting",Type:"OPEN_NAMED_DIALOG"}],Label:"setup_back",Name:"Back."}],
+        Label:"courier_setup",
+        Name:"Post Office Setup",
+        Priority:-1,
+        Texts:[{Text:"Operator setup only. Stand beside me and choose the bind option. The Post Office will record this exact NPC and this position as my home. Non-operators cannot use the setup command."}]
+      },{
+        Buttons:[{Actions:[{Type:"CLOSE_DIALOG"}],Label:"farewell_close",Name:"Safe travels."}],
+        Label:"farewell",
+        Name:"Farewell",
+        Priority:-1,
+        Texts:[{Text:"Right then. Rain or shine, the post still has to move. Safe travels, @initiator."}]
+      }],
+      Type:"CUSTOM"
+    },
+    EasyNPCVersion:3,
+    ObjectiveData:{
+      ObjectiveDataSet:[{Type:"LOOK_AT_RESET"},{Type:"LOOK_AT_PLAYER"},{Type:"LOOK_AT_MOB"}]
+    },
+    PresetUUID:[I;-355271532,2094746781,-1171990358,1439561484],
+    SkinData:{
+      Type:"RESOURCE_LOCATION",
+      Texture:"spectralmail:textures/entity/postman.png",
+      Timestamp:1788606000000L
+    },
+    id:"easy_npc:humanoid"
+  }
+}

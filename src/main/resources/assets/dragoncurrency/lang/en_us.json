@@ -1,0 +1,21 @@
+{
+  "item.dragoncurrency.copper_coin": "Copper Coin",
+  "item.dragoncurrency.silver_coin": "Silver Coin",
+  "item.dragoncurrency.gold_coin": "Gold Coin",
+  "item.dragoncurrency.platinum_coin": "Platinum Coin",
+  "item.dragoncurrency.dragon_coin": "Dragon Coin",
+  "item.dragoncurrency.coin_pouch": "Old Coin Pouch",
+  "container.dragoncurrency.coin_pouch": "Old Coin Pouch",
+  "container.dragoncurrency.bank": "Dragon Bank",
+
+  "item.dragoncurrency.pouch_previous_button": "Previous Coin",
+  "item.dragoncurrency.pouch_next_button": "Next Coin",
+  "item.dragoncurrency.pouch_withdraw_one_button": "Withdraw 1 Selected Coin",
+  "item.dragoncurrency.pouch_withdraw_stack_button": "Withdraw 64 Selected Coins",
+
+  "item.dragoncurrency.pouch_copper_display": "Copper Withdrawal",
+  "item.dragoncurrency.pouch_silver_display": "Silver Withdrawal",
+  "item.dragoncurrency.pouch_gold_display": "Gold Withdrawal",
+  "item.dragoncurrency.pouch_platinum_display": "Platinum Withdrawal",
+  "item.dragoncurrency.pouch_dragon_display": "Dragon Withdrawal"
+}

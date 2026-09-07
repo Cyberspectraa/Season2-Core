@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "spectralmail:block/drop_box" },
+    "facing=east":  { "model": "spectralmail:block/drop_box", "y": 90 },
+    "facing=south": { "model": "spectralmail:block/drop_box", "y": 180 },
+    "facing=west":  { "model": "spectralmail:block/drop_box", "y": 270 }
+  }
+}
