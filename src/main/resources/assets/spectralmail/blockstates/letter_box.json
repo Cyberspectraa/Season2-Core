@@ -1,8 +1,0 @@
-{
-  "variants": {
-    "facing=north": { "model": "spectralmail:block/letter_box" },
-    "facing=east":  { "model": "spectralmail:block/letter_box", "y": 90 },
-    "facing=south": { "model": "spectralmail:block/letter_box", "y": 180 },
-    "facing=west":  { "model": "spectralmail:block/letter_box", "y": 270 }
-  }
-}

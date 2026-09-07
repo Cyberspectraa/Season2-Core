@@ -1,9 +1,0 @@
-{
-  "type": "minecraft:crafting_shapeless",
-  "ingredients": [
-    {"item":"minecraft:chest"},
-    {"item":"minecraft:iron_nugget"},
-    {"item":"minecraft:oak_planks"}
-  ],
-  "result": {"item":"spectralmail:letter_box","count":1}
-}
