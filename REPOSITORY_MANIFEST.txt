@@ -1,0 +1,14 @@
+Season2 Core GitHub package
+Baseline: 0.4.4-alpha.4
+Minecraft: 1.20.1
+Forge: 47.4.x
+Java: 17
+
+Key paths:
+  src/main/java/        Current legacy source baseline
+  src/main/resources/   Current assets/data/mod metadata
+  presets/              EasyNPC import presets
+  release/              Current tested binary/release files
+  docs/                  Build/distribution/roadmap notes
+
+Important: see docs/BUILD_MIGRATION.md before attempting major Java changes.
