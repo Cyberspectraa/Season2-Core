@@ -2,32 +2,23 @@
 
 ## 0.6.0-alpha.6 — Core polish
 
-The 0.5.0-alpha.5 Town Life integration is complete and runtime-tested. The current development line focuses on making the combined mod cleaner and safer without rewriting working gameplay systems.
+The 0.5.0-alpha.5 Town Life integration is complete and runtime-tested. The 0.6 development line focuses on making the combined mod cleaner and safer without rewriting working gameplay systems.
 
-### Current goals
+### Completed in the current development line
 
-1. Provide one **Season 2 Core** creative tab for current player-facing items and blocks from all three modules.
-2. Keep old compatibility-only Dragon Currency pouch/helper registry entries hidden from the creative inventory.
-3. Harden Dragon Bank arithmetic and preserve existing balances.
-4. Keep Spectral Mail server-authoritative and preserve existing mail/world persistence.
-5. Preserve Town Life's real-bed sleeping and existing HOME / COMMUTING / WORK / ERRAND / SLEEPING separation.
-6. Keep EasyNPC/Minecraft responsible for physical movement, stairs and doors.
-7. Keep specialised banker/courier NPCs outside generic resident scheduling.
-8. Standardise the three Forge module versions to the single Season2 Core build version.
-9. Regression-test the combined JAR before merging to `main`.
+1. Added one **Season 2 Core** creative tab for current player-facing items and blocks from all three modules.
+2. Kept old compatibility-only Dragon Currency pouch/helper registry entries hidden from the creative inventory.
+3. Hardened Dragon Bank arithmetic while preserving existing balances.
+4. Preserved Spectral Mail server authority, mail/world persistence and courier behavior.
+5. Preserved Town Life's real-bed sleeping and HOME / COMMUTING / WORK / ERRAND / SLEEPING separation.
+6. Kept EasyNPC/Minecraft responsible for physical movement, stairs and doors.
+7. Kept specialised banker/courier NPCs outside generic resident scheduling.
+8. Standardised the three Forge module versions to the single Season2 Core build version.
+9. Regression-tested the combined 0.6.0-alpha.6-dev JAR in game.
+10. Converted the remaining legacy SRG-named Java source once and committed readable Mojang-mapped source directly.
+11. Removed SRG source rewriting from normal build and release workflows while keeping the SRG audit as a guardrail.
 
-## Next build-system cleanup
-
-Once the 0.6 gameplay-polish build is confirmed in game:
-
-- convert the remaining legacy SRG-named Java source once
-- commit the readable Mojang-mapped source directly
-- remove the SRG source-rewrite step from normal CI
-- keep the SRG audit script temporarily as a guard against regressions
-
-This should be a separate, reviewable maintenance change rather than being mixed into gameplay changes.
-
-## Later improvements
+## Next improvements
 
 ### Dragon Currency
 
