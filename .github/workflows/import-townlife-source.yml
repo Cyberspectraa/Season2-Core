@@ -1,0 +1,229 @@
+name: Import Town Life 0.7.1 source
+
+on:
+  push:
+    branches: [ townlife-integration ]
+    paths:
+      - '.github/workflows/import-townlife-source.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  import-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v5
+        with:
+          ref: townlife-integration
+          fetch-depth: 0
+
+      - name: Download validated Town Life 0.7.1 source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: townlife-lite-forge-1.20.1-0.7.1-source
+          path: .townlife-source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: Cyberspectraa/Season2-Core
+          run-id: 34256095343
+
+      - name: Import Town Life source
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_ZIP=$(find .townlife-source -type f -name '*source.zip' -print -quit)
+          test -n "$SOURCE_ZIP"
+          mkdir -p .townlife-source/extracted
+          unzip -q "$SOURCE_ZIP" -d .townlife-source/extracted
+          PROJECT=.townlife-source/extracted/TownLife-Forge-1.20.1
+          test -f "$PROJECT/src/main/java/com/season2/townlife/TownLife.java"
+
+          mkdir -p src/main/java/com/season2
+          rm -rf src/main/java/com/season2/townlife
+          cp -R "$PROJECT/src/main/java/com/season2/townlife" src/main/java/com/season2/
+
+          mkdir -p src/main/resources/assets
+          rm -rf src/main/resources/assets/townlife
+          cp -R "$PROJECT/src/main/resources/assets/townlife" src/main/resources/assets/
+
+          mkdir -p src/test/java/com/season2/townlife
+          rm -rf src/test/java/com/season2/townlife
+          cp -R "$PROJECT/src/test/java/com/season2/townlife" src/test/java/com/season2/
+
+      - name: Apply Season2 integration safeguards
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > src/main/java/com/season2/townlife/runtime/Season2NpcProtection.java <<'JAVA'
+          package com.season2.townlife.runtime;
+
+          import java.lang.reflect.Method;
+          import java.util.Optional;
+          import java.util.UUID;
+          import net.minecraft.server.MinecraftServer;
+          import net.minecraft.server.level.ServerLevel;
+          import net.minecraft.world.entity.Mob;
+
+          /** Keeps specialised Season 2 NPCs out of the generic Town Life scheduler. */
+          public final class Season2NpcProtection {
+              private static final String MAIL_DATA_CLASS = "uk.co.cyberspectra.spectralmail.MailSavedData";
+
+              private Season2NpcProtection() {}
+
+              public static Optional<String> protectedReason(ServerLevel level, Mob mob) {
+                  if (level == null || mob == null) return Optional.empty();
+                  if (isBoundSpectralCourier(level.getServer(), mob.getUUID())) {
+                      return Optional.of("This EasyNPC is the bound Spectral Mail courier and is managed by the postal system.");
+                  }
+                  return Optional.empty();
+              }
+
+              public static boolean isProtected(ServerLevel level, Mob mob) {
+                  return protectedReason(level, mob).isPresent();
+              }
+
+              private static boolean isBoundSpectralCourier(MinecraftServer server, UUID uuid) {
+                  if (server == null || uuid == null) return false;
+                  try {
+                      Class<?> dataClass = Class.forName(MAIL_DATA_CLASS);
+                      Method get = dataClass.getMethod("get", MinecraftServer.class);
+                      Object data = get.invoke(null, server);
+                      if (data == null) return false;
+                      Object courierUuid = dataClass.getMethod("courierUuid").invoke(data);
+                      return uuid.equals(courierUuid);
+                  } catch (ClassNotFoundException ignored) {
+                      return false;
+                  } catch (ReflectiveOperationException | RuntimeException ignored) {
+                      return false;
+                  }
+              }
+          }
+          JAVA
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          service = Path('src/main/java/com/season2/townlife/runtime/TownLifeLiteService.java')
+          text = service.read_text()
+          anchor = '''        TownLifeSavedData data = TownLifeSavedData.get(level);\n'''
+          insert = '''        Optional<String> protectedReason = Season2NpcProtection.protectedReason(level, mob);\n        if (protectedReason.isPresent()) {\n            player.displayClientMessage(Component.literal(protectedReason.get()).withStyle(ChatFormatting.RED), false);\n            return false;\n        }\n\n'''
+          if insert not in text:
+              if text.count(anchor) != 1:
+                  raise SystemExit('TownLifeLiteService integration anchor not found exactly once')
+              text = text.replace(anchor, insert + anchor, 1)
+          service.write_text(text)
+
+          manager = Path('src/main/java/com/season2/townlife/runtime/TownLifeManager.java')
+          text = manager.read_text()
+          old = '''            Town town = data.town(resident.townId()).orElse(null);\n            if (town == null) continue;\n            RuntimeState runtime = RUNTIME.computeIfAbsent(resident.entityUuid(), ignored -> new RuntimeState());\n            dirty |= tickResident(level, data, town, resident, mobOptional.get(), runtime, gameTime, level.getDayTime());\n'''
+          new = '''            Mob mob = mobOptional.get();\n            if (Season2NpcProtection.isProtected(level, mob)) {\n                resident.setReason("Protected Season 2 service NPC; Town Life scheduler skipped");\n                forgetRuntime(resident.entityUuid());\n                continue;\n            }\n            Town town = data.town(resident.townId()).orElse(null);\n            if (town == null) continue;\n            RuntimeState runtime = RUNTIME.computeIfAbsent(resident.entityUuid(), ignored -> new RuntimeState());\n            dirty |= tickResident(level, data, town, resident, mob, runtime, gameTime, level.getDayTime());\n'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('TownLifeManager main tick integration anchor not found')
+              text = text.replace(old, new, 1)
+
+          old = '''    public static void pauseForInteraction(ServerLevel level, UUID residentUuid, Mob mob, Entity player) {\n        if (TownLifeSavedData.get(level).resident(residentUuid).isEmpty()) return;\n'''
+          new = '''    public static void pauseForInteraction(ServerLevel level, UUID residentUuid, Mob mob, Entity player) {\n        if (Season2NpcProtection.isProtected(level, mob)) return;\n        if (TownLifeSavedData.get(level).resident(residentUuid).isEmpty()) return;\n'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('TownLifeManager interaction anchor not found')
+              text = text.replace(old, new, 1)
+
+          old = '''            if (!(entity instanceof Mob providerMob) || !EasyNpcCompat.isEasyNpc(providerMob)) continue;\n            if (providerMob.distanceToSqr(workplace.anchor().getX()+0.5D, workplace.anchor().getY(), workplace.anchor().getZ()+0.5D) > 144D) continue;\n'''
+          new = '''            if (!(entity instanceof Mob providerMob) || !EasyNpcCompat.isEasyNpc(providerMob)) continue;\n            if (Season2NpcProtection.isProtected(level, providerMob)) continue;\n            if (providerMob.distanceToSqr(workplace.anchor().getX()+0.5D, workplace.anchor().getY(), workplace.anchor().getZ()+0.5D) > 144D) continue;\n'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('TownLifeManager provider anchor not found')
+              text = text.replace(old, new, 1)
+
+          old = '''            if (!(entity instanceof Mob mob) || !EasyNpcCompat.isEasyNpc(entity)) continue;\n            if (!SleepService.maintain(level, mob, runtime.sleepBedPos)) {\n'''
+          new = '''            if (!(entity instanceof Mob mob) || !EasyNpcCompat.isEasyNpc(entity)) continue;\n            if (Season2NpcProtection.isProtected(level, mob)) {\n                runtime.sleeping = false;\n                runtime.sleepBedPos = null;\n                runtime.sleepWakePos = null;\n                runtime.mode = null;\n                runtime.modeAnchor = null;\n                continue;\n            }\n            if (!SleepService.maintain(level, mob, runtime.sleepBedPos)) {\n'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('TownLifeManager sleep anchor not found')
+              text = text.replace(old, new, 1)
+          manager.write_text(text)
+          PY
+
+      - name: Merge Town Life into Forge project metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          build = Path('build.gradle')
+          text = build.read_text()
+          town_line = '                townlife { source sourceSets.main }\n'
+          if town_line not in text:
+              anchor = '                spectralmail { source sourceSets.main }\n'
+              if text.count(anchor) != 1:
+                  raise SystemExit('build.gradle mod source anchor not found exactly once')
+              text = text.replace(anchor, anchor + town_line, 1)
+          build.write_text(text)
+
+          mods = Path('src/main/resources/META-INF/mods.toml')
+          text = mods.read_text()
+          if 'modId="townlife"' not in text:
+              text += '''\n[[mods]]\nmodId="townlife"\nversion="0.7.1"\ndisplayName="Town Life"\nauthors="Season 2 Project"\ndescription=''' + "'''" + '''\nLightweight EasyNPC town routines integrated into Season2 Core. Operators register a resident with the Town Wand, assign a real bed as home and a recognised workstation as work. Town Life owns schedules, needs, intentions, sleeping and service errands while EasyNPC/Minecraft owns physical navigation, doors and stairs.\n''' + "'''" + '''\n\n[[dependencies.townlife]]\nmodId="forge"\nmandatory=true\nversionRange="[47.2.0,)"\nordering="NONE"\nside="BOTH"\n\n[[dependencies.townlife]]\nmodId="minecraft"\nmandatory=true\nversionRange="[1.20.1,1.20.2)"\nordering="NONE"\nside="BOTH"\n\n[[dependencies.townlife]]\nmodId="easy_npc"\nmandatory=true\nversionRange="[7.11.0,8.0.0)"\nordering="AFTER"\nside="BOTH"\n'''
+          mods.write_text(text)
+          PY
+
+          cat > docs/TOWNLIFE_INTEGRATION.md <<'DOC'
+          # Town Life 0.7.1 integration contract
+
+          Town Life decides resident schedules, needs, state, intentions and destinations. EasyNPC/Minecraft remains responsible for physical navigation, stairs and doors.
+
+          The first Season2 Core integration preserves the tested 0.7.1 identifiers and persistence: mod ID `townlife`, SavedData ID `townlife`, `townlife:town_wand`, and `townlife:dev_clock`.
+
+          The removed custom staged/stair-aware navigation and custom door systems must not be reintroduced. `SleepService` continues to use real vanilla beds with no floor-sleep fallback.
+
+          The currently bound Spectral Mail courier is explicitly protected from Town Life registration and scheduling. The banker remains a specialist NPC and should not be registered with the Town Wand.
+
+          Town Life does not force-load chunks. Resident AI continues only while the relevant chunks are loaded/ticking.
+          DOC
+
+      - name: Stage source integration commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .townlife-source
+          git config user.name "Cyberspectraa"
+          git config user.email "CJonRoberts2005@gmail.com"
+          git add build.gradle src/main/java/com/season2/townlife src/main/resources/assets/townlife src/main/resources/META-INF/mods.toml src/test/java/com/season2/townlife docs/TOWNLIFE_INTEGRATION.md
+          git diff --cached --stat
+          git commit -m "Integrate Town Life 0.7.1 source"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '8.10'
+
+      - name: Convert recovered SRG source to Mojang mappings for build
+        run: python scripts/migrate_srg_to_mojang.py src/main/java
+
+      - name: Verify mapped Java source
+        run: python scripts/check_legacy_srg.py src/main/java
+
+      - name: Build combined Forge JAR
+        run: gradle --no-daemon build
+
+      - name: Upload combined test JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: season2-core-townlife-source-build
+          path: build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Push tested integration commit
+        shell: bash
+        run: git push origin HEAD:townlife-integration
