@@ -34,7 +34,7 @@ public final class SpectralMail {
             "letter_box", () -> new BlockItem(LETTER_BOX.get(), new Item.Properties().stacksTo(16)));
 
     public static final RegistryObject<Item> LETTER_PAPER = ITEMS.register(
-            "letter_paper", () -> new Item(new Item.Properties().stacksTo(16)));
+            "letter_paper", () -> new LetterPaperItem(new Item.Properties().stacksTo(16)));
     public static final RegistryObject<Item> ADDRESSED_LETTER = ITEMS.register(
             "addressed_letter", () -> new AddressedLetterItem(new Item.Properties().stacksTo(1)));
 
@@ -47,5 +47,6 @@ public final class SpectralMail {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
+        MailNetwork.register();
     }
 }
