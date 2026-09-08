@@ -35,7 +35,8 @@ public final class DragonCurrency {
             () -> new CoinPouchItem(new Item.Properties().m_41487_(1))
     );
 
-    // Legacy GUI-only items retained for registry/world compatibility.
+    // Legacy GUI-only items retained for registry/world compatibility. They are
+    // intentionally not exposed in the Season 2 Core creative tab.
     public static final RegistryObject<Item> PREVIOUS_BUTTON = item("pouch_previous_button");
     public static final RegistryObject<Item> NEXT_BUTTON = item("pouch_next_button");
     public static final RegistryObject<Item> WITHDRAW_ONE_BUTTON = item("pouch_withdraw_one_button");
@@ -55,5 +56,6 @@ public final class DragonCurrency {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         ITEMS.register(modEventBus);
         MENUS.register(modEventBus);
+        Season2CreativeTab.TABS.register(modEventBus);
     }
 }
