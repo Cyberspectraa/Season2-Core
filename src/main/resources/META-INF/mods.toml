@@ -47,3 +47,33 @@ mandatory=true
 versionRange="[1.20.1,1.20.2)"
 ordering="NONE"
 side="BOTH"
+
+[[mods]]
+modId="townlife"
+version="0.7.1"
+displayName="Town Life"
+authors="Season 2 Project"
+description='''
+Lightweight EasyNPC town routines integrated into Season2 Core. Operators register a resident with the Town Wand, assign a real bed as home and a recognised workstation as work. Town Life owns schedules, needs, intentions, sleeping and service errands while EasyNPC/Minecraft owns physical navigation, doors and stairs.
+'''
+
+[[dependencies.townlife]]
+modId="forge"
+mandatory=true
+versionRange="[47.2.0,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.townlife]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.townlife]]
+modId="easy_npc"
+mandatory=true
+versionRange="[7.11.0,8.0.0)"
+ordering="AFTER"
+side="BOTH"
