@@ -4,16 +4,16 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="dragoncurrency"
-version="1.4.5"
+version="${mod_version}"
 displayName="Dragon Currency"
 authors="Minecraft Season2"
 description='''
-Five dragon-themed physical coins and the persistent Dragon Bank. This module remains compatible with the stable v1.4.5 bank data and EasyNPC banker command.
+Five dragon-themed physical coins and the persistent Dragon Bank. This module remains compatible with existing bank data and the EasyNPC banker workflow.
 '''
 
 [[mods]]
 modId="spectralmail"
-version="1.1.4-alpha.4"
+version="${mod_version}"
 displayName="Spectral Mail"
 authors="CyberSpectra / Minecraft Season2"
 description='''
@@ -50,7 +50,7 @@ side="BOTH"
 
 [[mods]]
 modId="townlife"
-version="0.7.1"
+version="${mod_version}"
 displayName="Town Life"
 authors="Season 2 Project"
 description='''
