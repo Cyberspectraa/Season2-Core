@@ -2,6 +2,19 @@
 
 This changelog tracks the combined Season2 Core development line.
 
+## 0.7.0-alpha.7-dev — Town Paths
+
+- Added the operator-only `townlife:path_wand` to the shared Season 2 Core creative tab.
+- Right-clicking a walkable surface with the Path Wand registers the connected blocks of the same block type, including one-block height changes for sloped/stair roads.
+- Sneak + right-click removes only the clicked registered path block so mistakes can be corrected without deleting the whole road.
+- Right-clicking air highlights nearby registered path blocks with particles and reports the total registered count.
+- Added persistent per-dimension Town Path data in `townlife_paths.dat` without changing the existing `townlife.dat` resident/town format.
+- Added a lightweight registered-road graph that plans high-level road waypoints for normal commutes, sleep trips and service errands.
+- EasyNPC/Minecraft still owns physical pathfinding, doors, stairs and collision handling between road waypoints; Town Life only chooses the preferred road route.
+- Residents leave the road near their final bed/work/provider destination so the existing final-approach and real-bed SleepService logic remains in control.
+- Emergency shelter movement deliberately bypasses Town Paths so hostile-mob escape remains direct and fast.
+- Added safety limits for bulk path registration and route-graph searches plus configurable path entry radius and waypoint spacing.
+
 ## 0.6.0-alpha.6-dev — Core polish
 
 - Added one shared **Season 2 Core** creative tab containing current player-facing content from Dragon Currency, Spectral Mail and Town Life.
