@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'gradle.properties'
+      - '.github/workflows/release.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Read release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(sed -n 's/^mod_version=//p' gradle.properties)
+          MC_VERSION=$(sed -n 's/^minecraft_version=//p' gradle.properties)
+          test -n "$VERSION"
+          test -n "$MC_VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "minecraft=$MC_VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-dev ]]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Development version detected; no GitHub Release will be created."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Java 17
+        if: steps.meta.outputs.publish == 'true'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        if: steps.meta.outputs.publish == 'true'
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '8.10'
+
+      - name: Convert legacy SRG identifiers to Mojang mappings
+        if: steps.meta.outputs.publish == 'true'
+        run: python scripts/migrate_srg_to_mojang.py src/main/java
+
+      - name: Verify mapped Java source
+        if: steps.meta.outputs.publish == 'true'
+        run: python scripts/check_legacy_srg.py src/main/java
+
+      - name: Build Forge JAR
+        if: steps.meta.outputs.publish == 'true'
+        run: gradle --no-daemon build
+
+      - name: Prepare release files
+        if: steps.meta.outputs.publish == 'true'
+        id: files
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION='${{ steps.meta.outputs.version }}'
+          MC_VERSION='${{ steps.meta.outputs.minecraft }}'
+          RAW_JAR=$(find build/libs -maxdepth 1 -type f -name 'Season2-Core-*.jar' ! -name '*-sources.jar' -print -quit)
+          test -n "$RAW_JAR"
+          DIST="Season2-Core-${VERSION}-forge-${MC_VERSION}.jar"
+          cp "$RAW_JAR" "$DIST"
+          sha256sum "$DIST" > "$DIST.sha256"
+          echo "jar=$DIST" >> "$GITHUB_OUTPUT"
+          echo "checksum=$DIST.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub pre-release
+        if: steps.meta.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION='${{ steps.meta.outputs.version }}'
+          TAG="v${VERSION}"
+          JAR='${{ steps.files.outputs.jar }}'
+          CHECKSUM='${{ steps.files.outputs.checksum }}'
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; nothing to do."
+            exit 0
+          fi
+
+          NOTES="docs/releases/${VERSION}.md"
+          if [[ -f "$NOTES" ]]; then
+            gh release create "$TAG" "$JAR" "$CHECKSUM" \
+              --target "$GITHUB_SHA" \
+              --title "Season2 Core ${VERSION}" \
+              --notes-file "$NOTES" \
+              --prerelease
+          else
+            gh release create "$TAG" "$JAR" "$CHECKSUM" \
+              --target "$GITHUB_SHA" \
+              --title "Season2 Core ${VERSION}" \
+              --generate-notes \
+              --prerelease
+          fi

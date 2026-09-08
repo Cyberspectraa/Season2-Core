@@ -2,6 +2,19 @@
 
 This changelog tracks the combined Season2 Core development line.
 
+## 0.5.0-alpha.5 — Town Life
+
+- Integrated Town Life 0.7.1 into the Season2 Core source tree as the `townlife` module.
+- Added Town Wand resident registration, real-bed home assignment and workplace assignment.
+- Added resident schedule states: HOME, COMMUTING, WORK, ERRAND and SLEEPING.
+- Added real vanilla bed sleeping through `SleepService` with no floor-sleep fallback.
+- Added hunger, energy, fun and social needs plus lightweight FOOD / TOOL / ARMOR service errands.
+- Kept EasyNPC/Minecraft responsible for physical navigation, stairs and doors; the removed custom staged/stair-aware navigation systems remain absent.
+- Preserved Town Life IDs and persistence, including the `townlife` mod ID, SavedData ID, `townlife:town_wand` and `townlife:dev_clock`.
+- Protected the currently bound Spectral Mail courier from generic Town Life registration and scheduling.
+- Confirmed Dragon Currency, Spectral Mail and Town Life coexist in one Forge 1.20.1 JAR through source-integrated in-game testing.
+- Requires EasyNPC `>=7.11.0` and `<8.0.0`.
+
 ## 0.4.4-alpha.4 — NPC integration
 
 - Bundled the supplied 64x64 postman skin as `spectralmail:textures/entity/postman.png`.

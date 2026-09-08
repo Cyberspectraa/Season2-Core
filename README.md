@@ -4,13 +4,13 @@ Private-server gameplay systems for **Minecraft 1.20.1 Forge**.
 
 ## Status
 
-- **Stable release:** `0.4.4-alpha.4`
-- **Current development line:** `0.5.0-alpha.5 — Town Life`
+- **Latest pre-release:** `0.5.0-alpha.5 — Town Life`
+- **Previous pre-release:** `0.4.4-alpha.4`
 - **Java:** 17
 - **Forge:** 47.4.x
 - **Distribution:** GitHub Releases
 
-The stable 0.4.4 release contains Dragon Currency and Spectral Mail. Town Life 0.7.1 has been validated in a combined runtime test and is being integrated properly into the source tree for 0.5.0.
+Season2 Core now ships Dragon Currency, Spectral Mail and Town Life together in one Forge 1.20.1 JAR.
 
 ## Modules
 
@@ -24,14 +24,7 @@ Town Life remains intentionally lightweight: it decides **what** a resident shou
 
 ## Requirements
 
-### Stable 0.4.4
-
-- Minecraft 1.20.1
-- Forge 47.4.x
-- Java 17
-- EasyNPC 7.10.x compatible setup
-
-### 0.5.0 Town Life development
+### 0.5.0-alpha.5
 
 - Minecraft 1.20.1
 - Forge 47.4.x
@@ -42,8 +35,8 @@ Town Life remains intentionally lightweight: it decides **what** a resident shou
 
 ```text
 Season2-Core/
-├── .github/workflows/   GitHub Actions build
-├── docs/                development notes
+├── .github/workflows/   GitHub Actions build/release automation
+├── docs/                development and release notes
 ├── presets/             EasyNPC presets
 ├── scripts/             source/build maintenance tools
 ├── src/main/java/       mod source
@@ -77,7 +70,7 @@ Release JARs are stored in **GitHub Releases**, not committed into the repositor
 - Discord Post Office integration
 - persistent offline-safe mail records
 
-### Town Life — 0.5 development
+### Town Life
 
 - Town Wand resident registration
 - real bed home assignment
@@ -99,7 +92,7 @@ Long-term cleanup is to commit the readable Mojang-mapped source directly and re
 
 ## Releases
 
-Use the repository's **Releases** page for official JAR downloads. Development build artifacts are produced by GitHub Actions when enabled by the active workflow.
+Use the repository's **Releases** page for official JAR downloads. Normal development builds are also available as GitHub Actions artifacts.
 
 ## Security
 
