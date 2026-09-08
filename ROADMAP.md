@@ -1,78 +1,58 @@
 # Roadmap
 
-## 0.5.0-alpha.5 — Town Life integration
+## 0.6.0-alpha.6 — Core polish
 
-Town Life 0.7.1 has now been validated in a combined runtime test with Dragon Currency and Spectral Mail.
+The 0.5.0-alpha.5 Town Life integration is complete and runtime-tested. The current development line focuses on making the combined mod cleaner and safer without rewriting working gameplay systems.
 
-The immediate goal is to convert that successful test into a proper single-source ForgeGradle build.
+### Current goals
 
-### Integration checklist
+1. Provide one **Season 2 Core** creative tab for current player-facing items and blocks from all three modules.
+2. Keep old compatibility-only Dragon Currency pouch/helper registry entries hidden from the creative inventory.
+3. Harden Dragon Bank arithmetic and preserve existing balances.
+4. Keep Spectral Mail server-authoritative and preserve existing mail/world persistence.
+5. Preserve Town Life's real-bed sleeping and existing HOME / COMMUTING / WORK / ERRAND / SLEEPING separation.
+6. Keep EasyNPC/Minecraft responsible for physical movement, stairs and doors.
+7. Keep specialised banker/courier NPCs outside generic resident scheduling.
+8. Standardise the three Forge module versions to the single Season2 Core build version.
+9. Regression-test the combined JAR before merging to `main`.
 
-1. Merge Town Life 0.7.1 source into the Season2 Core source tree.
-2. Preserve the `townlife` mod ID, registry IDs and SavedData ID for compatibility.
-3. Preserve the working `SleepService` real-bed implementation.
-4. Keep EasyNPC/Minecraft responsible for physical pathfinding, stairs and doors.
-5. Keep the Dragon Bank banker and Spectral Mail courier outside generic Town Life scheduling.
-6. Require EasyNPC `>=7.11.0` and `<8.0.0` for the Town Life development line.
-7. Build the combined JAR through GitHub Actions.
-8. Run client/server regression testing.
-9. Merge the integration branch into `main` once the source-built JAR matches the working runtime test.
+## Next build-system cleanup
 
-## Town Life foundation already proven
+Once the 0.6 gameplay-polish build is confirmed in game:
 
-- Town Wand resident registration
-- real bed home assignment
-- workplace/job assignment
-- HOME / COMMUTING / WORK / ERRAND / SLEEPING states
-- local wandering only while settled at HOME or WORK
-- real vanilla bed sleeping and wake handling
-- hunger, energy, fun and social needs
-- FOOD / TOOL / ARMOR service errands
-- provider availability and reservation logic
-- hostile-mob safety interruption
-- player-interaction pause
-- Dev Clock schedule testing
+- convert the remaining legacy SRG-named Java source once
+- commit the readable Mojang-mapped source directly
+- remove the SRG source-rewrite step from normal CI
+- keep the SRG audit script temporarily as a guard against regressions
+
+This should be a separate, reviewable maintenance change rather than being mixed into gameplay changes.
+
+## Later improvements
+
+### Dragon Currency
+
+- planned withdrawal/payment flow once the economy needs it
+- shared payment API for Town Life services without exposing raw balance mutation
+- optional transaction logging/admin diagnostics
+
+### Spectral Mail
+
+- split large courier/Discord classes into smaller services without changing persistence format
+- improve diagnostics for stuck/invalid postal records
+- keep postal routing and Discord authority server-side
+
+### Town Life
+
+- richer professions and service providers
+- blacksmith/tavern/market interactions
+- guards and patrol behaviour
+- NPC conversations and social interactions
+- optional Dragon Currency payments for services
+- optional Spectral Mail-related resident jobs
+- data-driven profession templates
 
 ## Design rule
 
 Season2 Core should **not become a custom NPC pathfinding mod**.
 
-Town Life controls:
-
-- destination
-- schedule
-- intention
-- resident state
-
-EasyNPC/Minecraft controls:
-
-- path calculation
-- stairs
-- doors
-- physical movement
-
-The obsolete custom staircase scanners, staged-navigation systems, travel hops and custom door service should not be restored without a compelling reason.
-
-## After 0.5.0 is stable
-
-Possible Town Life expansion:
-
-- richer professions
-- blacksmith services
-- taverns and food providers
-- guards and patrol behaviour
-- NPC conversations and social interactions
-- Dragon Currency service/payment integration
-- Spectral Mail NPC integration
-- town events
-- data-driven profession templates
-
-## Build-system cleanup
-
-After Town Life integration is stable:
-
-- commit Mojang-mapped readable Java source directly
-- remove SRG conversion from ordinary CI builds
-- standardise module/release version metadata
-- keep release binaries in GitHub Releases rather than the source repository
-- automate release JAR/checksum generation
+Town Life controls destination, schedule, intention and resident state. EasyNPC/Minecraft controls path calculation, stairs, doors and physical movement. The obsolete staged-navigation, staircase scanning, travel-hop and custom door systems should remain removed unless a concrete regression proves otherwise.

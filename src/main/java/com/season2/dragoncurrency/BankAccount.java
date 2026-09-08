@@ -54,10 +54,18 @@ public final class BankAccount {
         return Math.min((long) requestedCoins, getBalance(player) / COIN_VALUES[denomination]);
     }
 
+    /**
+     * Removes up to the requested number of coins without allowing multiplication
+     * overflow or a negative balance. The bank balance remains server-authoritative.
+     */
     public static void debit(Player player, int denomination, long coins) {
         if (denomination < 0 || denomination >= COIN_VALUES.length || coins <= 0L) return;
-        long value = COIN_VALUES[denomination] * coins;
-        setBalance(player, Math.max(0L, getBalance(player) - value));
+        long unit = COIN_VALUES[denomination];
+        long current = getBalance(player);
+        long affordableCoins = current / unit;
+        long debitedCoins = Math.min(coins, affordableCoins);
+        if (debitedCoins <= 0L) return;
+        setBalance(player, current - debitedCoins * unit);
     }
 
     /**

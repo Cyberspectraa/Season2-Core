@@ -5,12 +5,12 @@ Private-server gameplay systems for **Minecraft 1.20.1 Forge**.
 ## Status
 
 - **Latest pre-release:** `0.5.0-alpha.5 — Town Life`
-- **Previous pre-release:** `0.4.4-alpha.4`
+- **Current development line:** `0.6.0-alpha.6-dev — Core polish`
 - **Java:** 17
 - **Forge:** 47.4.x
 - **Distribution:** GitHub Releases
 
-Season2 Core now ships Dragon Currency, Spectral Mail and Town Life together in one Forge 1.20.1 JAR.
+Season2 Core ships Dragon Currency, Spectral Mail and Town Life together in one Forge 1.20.1 JAR.
 
 ## Modules
 
@@ -24,32 +24,21 @@ Town Life remains intentionally lightweight: it decides **what** a resident shou
 
 ## Requirements
 
-### 0.5.0-alpha.5
-
 - Minecraft 1.20.1
 - Forge 47.4.x
 - Java 17
 - EasyNPC `>=7.11.0` and `<8.0.0`
 
-## Repository layout
+## Creative inventory
 
-```text
-Season2-Core/
-├── .github/workflows/   GitHub Actions build/release automation
-├── docs/                development and release notes
-├── presets/             EasyNPC presets
-├── scripts/             source/build maintenance tools
-├── src/main/java/       mod source
-├── src/main/resources/  assets, data and Forge metadata
-├── build.gradle
-├── gradle.properties
-├── settings.gradle
-├── CHANGELOG.md
-├── ROADMAP.md
-└── README.md
-```
+Development builds from 0.6.0 onward expose the current player-facing content from all three modules in one **Season 2 Core** creative tab:
 
-Release JARs are stored in **GitHub Releases**, not committed into the repository.
+- Copper, Silver, Gold, Platinum and Dragon Coins
+- Letter Paper, Addressed Letter, Sealed Letter and Opened Letter
+- Drop Box and Letter Box
+- Town Wand and Town Life Dev Clock
+
+Old Dragon Currency pouch GUI helper items remain registered only for registry/world compatibility and are intentionally hidden from the shared tab.
 
 ## Current gameplay systems
 
@@ -59,6 +48,7 @@ Release JARs are stored in **GitHub Releases**, not committed into the repositor
 - persistent server-authoritative bank balances
 - EasyNPC banker integration
 - current bank flow is deposit-only
+- overflow-safe bank debit handling for future withdrawal/payment features
 
 ### Spectral Mail
 
@@ -84,11 +74,15 @@ Release JARs are stored in **GitHub Releases**, not committed into the repositor
 - Dev Clock schedule testing
 - specialised banker and courier NPCs remain outside generic Town Life control
 
+## Compatibility rules
+
+The 0.6 development line keeps all existing module IDs, registry IDs and persistent data IDs intact. The creative-tab cleanup does not rename `dragoncurrency:*`, `spectralmail:*` or `townlife:*` content.
+
 ## Building
 
 GitHub Actions uses Java 17 and ForgeGradle. The repository still contains legacy SRG-named source from the old manual build history, so CI currently performs the SRG-to-Mojang migration before compiling.
 
-Long-term cleanup is to commit the readable Mojang-mapped source directly and remove that conversion from ordinary builds.
+The next build-system cleanup is to commit the readable Mojang-mapped Java source directly and then remove the source-rewrite step from ordinary CI.
 
 ## Releases
 

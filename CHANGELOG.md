@@ -2,6 +2,17 @@
 
 This changelog tracks the combined Season2 Core development line.
 
+## 0.6.0-alpha.6-dev — Core polish
+
+- Added one shared **Season 2 Core** creative tab containing current player-facing content from Dragon Currency, Spectral Mail and Town Life.
+- Kept legacy Dragon Currency pouch/helper registry entries for compatibility while hiding them from the shared creative tab.
+- Hardened Dragon Bank debit arithmetic against multiplication overflow and accidental overdrawing.
+- Removed stale hard-coded Spectral Mail version metadata and switched all three Forge mod entries to the single Season2 Core build version.
+- Cleaned Town Life initialization naming now that it is integrated into Season2 Core.
+- Preserved all existing module IDs, item/block registry IDs and persistent data IDs.
+- Preserved Town Life's real-bed `SleepService`, schedule-state separation and EasyNPC/Minecraft-owned physical navigation.
+- Preserved the specialised Dragon Bank banker and bound Spectral Mail courier model rather than turning them into generic Town Life residents.
+
 ## 0.5.0-alpha.5 — Town Life
 
 - Integrated Town Life 0.7.1 into the Season2 Core source tree as the `townlife` module.
