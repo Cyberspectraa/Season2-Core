@@ -116,7 +116,7 @@ public final class PostalRuntime {
         Object rawState = blockStateAt(level, pos);
         if (rawState instanceof BlockState state) {
             try {
-                Object value = state.m_61143_(HorizontalDirectionalBlock.f_54117_);
+                Object value = state.getValue(HorizontalDirectionalBlock.FACING);
                 if (value instanceof Direction direction) facing = direction;
             } catch (RuntimeException ignored) {
             }

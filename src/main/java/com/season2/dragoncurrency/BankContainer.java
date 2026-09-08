@@ -22,49 +22,49 @@ public final class BankContainer extends SimpleContainer {
     }
 
     @Override
-    public boolean m_7013_(int slot, ItemStack stack) {
+    public boolean canPlaceItem(int slot, ItemStack stack) {
         return slot == DEPOSIT_SLOT && BankAccount.denominationIndex(stack) >= 0;
     }
 
     @Override
-    public void m_6836_(int slot, ItemStack stack) {
+    public void setItem(int slot, ItemStack stack) {
         if (depositing) {
-            super.m_6836_(slot, stack);
+            super.setItem(slot, stack);
             return;
         }
 
         if (slot == DEPOSIT_SLOT) {
-            if (stack != null && !stack.m_41619_()) {
+            if (stack != null && !stack.isEmpty()) {
                 int denomination = BankAccount.denominationIndex(stack);
                 if (denomination >= 0) {
-                    BankAccount.deposit(player, denomination, stack.m_41613_());
+                    BankAccount.deposit(player, denomination, stack.getCount());
                 }
             }
 
             depositing = true;
             try {
-                super.m_6836_(DEPOSIT_SLOT, ItemStack.f_41583_);
+                super.setItem(DEPOSIT_SLOT, ItemStack.EMPTY);
             } finally {
                 depositing = false;
             }
-            super.m_6596_();
+            super.setChanged();
             return;
         }
 
-        super.m_6836_(slot, stack);
+        super.setItem(slot, stack);
     }
 
     public int depositFromPlayerStack(ItemStack stack) {
         int denomination = BankAccount.denominationIndex(stack);
         if (denomination < 0) return 0;
 
-        int requested = stack.m_41613_();
+        int requested = stack.getCount();
         long accepted = BankAccount.deposit(player, denomination, requested);
         if (accepted <= 0L) return 0;
 
         int acceptedInt = (int) accepted;
-        stack.m_41774_(acceptedInt);
-        super.m_6596_();
+        stack.shrink(acceptedInt);
+        super.setChanged();
         return acceptedInt;
     }
 }

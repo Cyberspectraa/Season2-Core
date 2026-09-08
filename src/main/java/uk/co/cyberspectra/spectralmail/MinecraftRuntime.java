@@ -239,7 +239,7 @@ public final class MinecraftRuntime {
     }
 
     public static void clearMainHand(Object entity) {
-        setMainHand(entity, ItemStack.f_41583_);
+        setMainHand(entity, ItemStack.EMPTY);
     }
 
     public static boolean teleport(Object entity, double x, double y, double z) {

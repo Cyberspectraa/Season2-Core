@@ -14,7 +14,7 @@ public final class DragonCurrencyClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() ->
-                MenuScreens.m_96206_(DragonCurrency.BANK_MENU.get(), CoinPouchScreen::new)
+                MenuScreens.register(DragonCurrency.BANK_MENU.get(), CoinPouchScreen::new)
         );
     }
 }

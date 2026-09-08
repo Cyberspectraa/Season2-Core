@@ -84,8 +84,8 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 17
 }
 
-// Transitional audit until the remaining legacy SRG source is committed in
-// readable Mojang mappings. CI still performs that migration before compiling.
+// Guard against accidentally reintroducing obfuscated/SRG method names now
+// that the repository stores readable Mojang-mapped Java source directly.
 tasks.register('checkLegacySrg', Exec) {
     workingDir projectDir
     commandLine 'python', 'scripts/check_legacy_srg.py', 'src/main/java'

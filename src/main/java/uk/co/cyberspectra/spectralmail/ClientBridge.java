@@ -14,6 +14,6 @@ public final class ClientBridge {
     }
 
     public static void openLetter(ItemStack stack) {
-        if (stack != null) opener.accept(stack.m_41777_());
+        if (stack != null) opener.accept(stack.copy());
     }
 }

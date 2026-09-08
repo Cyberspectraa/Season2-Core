@@ -32,7 +32,7 @@ public final class DragonCurrency {
 
     public static final RegistryObject<Item> COIN_POUCH = ITEMS.register(
             "coin_pouch",
-            () -> new CoinPouchItem(new Item.Properties().m_41487_(1))
+            () -> new CoinPouchItem(new Item.Properties().stacksTo(1))
     );
 
     // Legacy GUI-only items retained for registry/world compatibility. They are

@@ -236,7 +236,7 @@ public final class CourierManager {
                 active.phase = Phase.WAITING;
                 active.phaseStarted = serverTicks;
             } else if (!switchToLetterBox(server, data, config, courier, record)) {
-                recipient.m_5661_(Component.m_237113_("Your inventory is full. The postman will keep the letter safe until it can be delivered."), true);
+                recipient.displayClientMessage(Component.literal("Your inventory is full. The postman will keep the letter safe until it can be delivered."), true);
                 beginReturn(courier, false);
             }
             return;
@@ -244,7 +244,7 @@ public final class CourierManager {
 
         if (timedOut(config.courierTimeoutSeconds)) {
             if (!switchToLetterBox(server, data, config, courier, record)) {
-                recipient.m_5661_(Component.m_237113_("The postman could not reach you. Your letter remains safe."), true);
+                recipient.displayClientMessage(Component.literal("The postman could not reach you. Your letter remains safe."), true);
                 beginReturn(courier, false);
             }
             return;
@@ -275,7 +275,7 @@ public final class CourierManager {
             if (data.depositToLetterBox(record, config.letterBoxCapacity)) {
                 PostalFeedback.deliveredToLetterBox(server, target);
                 ServerPlayer online = MinecraftRuntime.findOnlinePlayer(server, record.recipientUuid);
-                if (online != null) online.m_5661_(Component.m_237113_("The postman left a sealed letter in your Letter Box."), true);
+                if (online != null) online.displayClientMessage(Component.literal("The postman left a sealed letter in your Letter Box."), true);
                 active.phase = Phase.WAITING;
                 active.phaseStarted = serverTicks;
                 clearPostalApproach();

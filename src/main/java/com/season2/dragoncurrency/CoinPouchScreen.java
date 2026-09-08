@@ -16,42 +16,42 @@ public final class CoinPouchScreen extends AbstractContainerScreen<BankMenu> {
 
     public CoinPouchScreen(BankMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.f_97726_ = 176;
-        this.f_97727_ = 166;
-        this.f_97728_ = 8;
-        this.f_97729_ = 6;
-        this.f_97730_ = 8;
-        this.f_97731_ = 73;
+        this.imageWidth = 176;
+        this.imageHeight = 166;
+        this.titleLabelX = 8;
+        this.titleLabelY = 6;
+        this.inventoryLabelX = 8;
+        this.inventoryLabelY = 73;
     }
 
     @Override
-    public void m_88315_(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.m_280273_(graphics);
-        super.m_88315_(graphics, mouseX, mouseY, partialTick);
-        this.m_280072_(graphics, mouseX, mouseY);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(graphics);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        this.renderTooltip(graphics, mouseX, mouseY);
     }
 
     @Override
-    protected void m_7286_(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.m_280218_(
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        graphics.blit(
                 TEXTURE,
-                this.f_97735_,
-                this.f_97736_,
+                this.leftPos,
+                this.topPos,
                 0,
                 0,
-                this.f_97726_,
-                this.f_97727_
+                this.imageWidth,
+                this.imageHeight
         );
     }
 
     @Override
-    protected void m_280003_(GuiGraphics graphics, int mouseX, int mouseY) {
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         String formatted = NumberFormat.getIntegerInstance(Locale.US)
-                .format(this.f_97732_.getSyncedBalance());
+                .format(this.menu.getSyncedBalance());
 
-        graphics.m_280056_(this.f_96547_, "Dragon Bank", 8, 6, 0x404040, false);
-        graphics.m_280056_(this.f_96547_, "Balance: " + formatted, 14, 21, 0x404040, false);
-        graphics.m_280056_(this.f_96547_, "Deposit", 68, 56, 0x404040, false);
-        graphics.m_280056_(this.f_96547_, "Inventory", 8, 73, 0x404040, false);
+        graphics.drawString(this.font, "Dragon Bank", 8, 6, 0x404040, false);
+        graphics.drawString(this.font, "Balance: " + formatted, 14, 21, 0x404040, false);
+        graphics.drawString(this.font, "Deposit", 68, 56, 0x404040, false);
+        graphics.drawString(this.font, "Inventory", 8, 73, 0x404040, false);
     }
 }

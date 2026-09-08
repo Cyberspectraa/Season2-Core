@@ -40,28 +40,28 @@ public final class BankCommands {
     }
 
     private static int showBalance(CommandSourceStack source) {
-        ServerPlayer player = source.m_230896_();
+        ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.m_81352_(Component.m_237113_("This command can only be used by a player."));
+            source.sendFailure(Component.literal("This command can only be used by a player."));
             return 0;
         }
         BankAccount.migrateLegacyPouches(player);
         String formatted = NumberFormat.getIntegerInstance(Locale.US).format(BankAccount.getBalance(player));
-        source.m_288197_(() -> Component.m_237113_("Balance: " + formatted), false);
+        source.sendSuccess(() -> Component.literal("Balance: " + formatted), false);
         return 1;
     }
 
     private static int openBank(CommandSourceStack source, String playerName) {
         // Normal players cannot invoke the banker GUI themselves. EasyNPC command
         // actions run as the NPC, so they pass this check while targeting @initiator.
-        if (source.m_230897_()) {
-            source.m_81352_(Component.m_237113_("You must speak to a banker to access the bank."));
+        if (source.isPlayer()) {
+            source.sendFailure(Component.literal("You must speak to a banker to access the bank."));
             return 0;
         }
 
-        ServerPlayer target = source.m_81377_().m_6846_().m_11255_(playerName);
+        ServerPlayer target = source.getServer().getPlayerList().getPlayerByName(playerName);
         if (target == null) {
-            source.m_81352_(Component.m_237113_("Bank customer is not online."));
+            source.sendFailure(Component.literal("Bank customer is not online."));
             return 0;
         }
 
@@ -71,9 +71,9 @@ public final class BankCommands {
         // normal menu-open packet. IForgeMenuType's factory also supports the
         // vanilla two-argument creation path and passes null for FriendlyByteBuf.
         // This keeps EasyNPC command actions on the same reliable path used by v1.4.0.
-        target.m_5893_(new SimpleMenuProvider(
+        target.openMenu(new SimpleMenuProvider(
                 (containerId, inventory, player) -> new BankMenu(containerId, inventory, container),
-                Component.m_237115_("container.dragoncurrency.bank")
+                Component.translatable("container.dragoncurrency.bank")
         ));
         return 1;
     }

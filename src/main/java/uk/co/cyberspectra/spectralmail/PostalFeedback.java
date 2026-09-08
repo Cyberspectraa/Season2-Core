@@ -17,22 +17,22 @@ public final class PostalFeedback {
         ServerLevel level = serverLevel(server, address);
         if (level == null) return;
         BlockPos pos = pos(address);
-        level.m_5594_(null, pos, SoundEvents.f_11713_, BLOCKS, 0.65F, 1.05F);
-        level.m_5594_(null, pos, SoundEvents.f_12011_, BLOCKS, 0.45F, 1.20F);
+        level.playSound(null, pos, SoundEvents.BOOK_PAGE_TURN, BLOCKS, 0.65F, 1.05F);
+        level.playSound(null, pos, SoundEvents.IRON_TRAPDOOR_CLOSE, BLOCKS, 0.45F, 1.20F);
         particles(level, address, 0.85D);
     }
 
     public static void deliveredToLetterBox(MinecraftServer server, MailSavedData.PostalAddress address) {
         ServerLevel level = serverLevel(server, address);
         if (level == null) return;
-        level.m_5594_(null, pos(address), SoundEvents.f_12011_, BLOCKS, 0.55F, 0.95F);
+        level.playSound(null, pos(address), SoundEvents.IRON_TRAPDOOR_CLOSE, BLOCKS, 0.55F, 0.95F);
         particles(level, address, 0.75D);
     }
 
     public static void collected(MinecraftServer server, MailSavedData.PostalAddress address) {
         ServerLevel level = serverLevel(server, address);
         if (level == null) return;
-        level.m_5594_(null, pos(address), SoundEvents.f_11713_, BLOCKS, 0.60F, 0.95F);
+        level.playSound(null, pos(address), SoundEvents.BOOK_PAGE_TURN, BLOCKS, 0.60F, 0.95F);
         particles(level, address, 0.75D);
     }
 
@@ -46,7 +46,7 @@ public final class PostalFeedback {
     }
 
     private static void particles(ServerLevel level, MailSavedData.PostalAddress address, double yOffset) {
-        level.m_8767_(ParticleTypes.f_123759_,
+        level.sendParticles(ParticleTypes.POOF,
                 address.x() + 0.5D, address.y() + yOffset, address.z() + 0.5D,
                 2, 0.12D, 0.08D, 0.12D, 0.01D);
     }

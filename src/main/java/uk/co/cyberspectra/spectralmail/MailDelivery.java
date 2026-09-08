@@ -14,13 +14,13 @@ public final class MailDelivery {
     public static boolean deliver(MailSavedData data, MailRecord record, ServerPlayer recipient) {
         if (data == null || record == null || recipient == null) return false;
         if (record.state != MailRecord.PENDING) return false;
-        if (!record.recipientUuid.equals(recipient.m_20148_())) return false;
+        if (!record.recipientUuid.equals(recipient.getUUID())) return false;
 
         ItemStack letter = MailItemData.sealed(record);
-        if (!recipient.m_150109_().m_36054_(letter)) return false;
+        if (!recipient.getInventory().add(letter)) return false;
 
         data.setState(record, MailRecord.DELIVERED);
-        recipient.m_5661_(Component.m_237113_("You received a sealed letter from " + record.senderName + "."), true);
+        recipient.displayClientMessage(Component.literal("You received a sealed letter from " + record.senderName + "."), true);
         return true;
     }
 
@@ -42,9 +42,9 @@ public final class MailDelivery {
 
     /** Manual safety fallback. /mail collect intentionally bypasses courier routing and physical boxes. */
     public static int deliverPending(ServerPlayer player) {
-        MailSavedData data = MailSavedData.get(player.m_20194_());
+        MailSavedData data = MailSavedData.get(player.getServer());
         data.remember(player);
-        List<MailRecord> pending = data.pendingFor(player.m_20148_());
+        List<MailRecord> pending = data.pendingFor(player.getUUID());
         int delivered = 0;
         for (MailRecord record : pending) {
             if (!deliver(data, record, player)) break;
@@ -55,10 +55,10 @@ public final class MailDelivery {
 
     public static void routePending(ServerPlayer player) {
         if (player == null) return;
-        MailSavedData data = MailSavedData.get(player.m_20194_());
+        MailSavedData data = MailSavedData.get(player.getServer());
         data.remember(player);
         if (SpectralMailConfig.get().courierEnabled && data.hasCourier()) {
-            for (MailRecord record : data.pendingFor(player.m_20148_())) CourierManager.enqueue(record.id);
+            for (MailRecord record : data.pendingFor(player.getUUID())) CourierManager.enqueue(record.id);
         } else {
             deliverPending(player);
         }

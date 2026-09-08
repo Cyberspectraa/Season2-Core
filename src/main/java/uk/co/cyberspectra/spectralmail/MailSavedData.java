@@ -53,31 +53,31 @@ public final class MailSavedData extends SavedData {
     private String discordPanelMessageId = "";
 
     public static MailSavedData get(MinecraftServer server) {
-        return server.m_129783_().m_8895_().m_164861_(MailSavedData::load, MailSavedData::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(MailSavedData::load, MailSavedData::new, DATA_ID);
     }
 
     public static MailSavedData load(CompoundTag root) {
         MailSavedData data = new MailSavedData();
 
-        ListTag known = root.m_128437_("KnownPlayers", COMPOUND_TAG_ID);
+        ListTag known = root.getList("KnownPlayers", COMPOUND_TAG_ID);
         for (int i = 0; i < known.size(); i++) {
-            CompoundTag entry = known.m_128728_(i);
-            if (!entry.m_128403_("UUID")) continue;
-            UUID uuid = entry.m_128342_("UUID");
-            String name = entry.m_128461_("Name");
+            CompoundTag entry = known.getCompound(i);
+            if (!entry.hasUUID("UUID")) continue;
+            UUID uuid = entry.getUUID("UUID");
+            String name = entry.getString("Name");
             if (name == null || name.isBlank()) continue;
             data.knownPlayers.put(name.toLowerCase(Locale.ROOT), uuid);
             data.canonicalNames.put(uuid, name);
         }
 
-        ListTag mail = root.m_128437_("Mail", COMPOUND_TAG_ID);
+        ListTag mail = root.getList("Mail", COMPOUND_TAG_ID);
         for (int i = 0; i < mail.size(); i++) {
-            MailRecord record = MailRecord.load(mail.m_128728_(i));
+            MailRecord record = MailRecord.load(mail.getCompound(i));
             if (record != null) data.records.put(record.id, record);
         }
 
-        if (root.m_128403_("CourierUUID")) data.courierUuid = root.m_128342_("CourierUUID");
-        String home = root.m_128461_("CourierHome");
+        if (root.hasUUID("CourierUUID")) data.courierUuid = root.getUUID("CourierUUID");
+        String home = root.getString("CourierHome");
         if (home != null && !home.isBlank()) {
             String[] parts = home.split(",", -1);
             if (parts.length == 3) {
@@ -90,28 +90,28 @@ public final class MailSavedData extends SavedData {
                 }
             }
         }
-        data.discordPanelMessageId = root.m_128461_("DiscordPanelMessageId");
+        data.discordPanelMessageId = root.getString("DiscordPanelMessageId");
         if (data.discordPanelMessageId == null) data.discordPanelMessageId = "";
 
-        ListTag boxes = root.m_128437_("LetterBoxes", COMPOUND_TAG_ID);
+        ListTag boxes = root.getList("LetterBoxes", COMPOUND_TAG_ID);
         for (int i = 0; i < boxes.size(); i++) {
-            CompoundTag tag = boxes.m_128728_(i);
-            if (!tag.m_128403_("Owner")) continue;
-            UUID owner = tag.m_128342_("Owner");
+            CompoundTag tag = boxes.getCompound(i);
+            if (!tag.hasUUID("Owner")) continue;
+            UUID owner = tag.getUUID("Owner");
             PostalAddress address = PostalAddress.load(tag);
             if (owner == null || address == null) continue;
             data.letterBoxes.put(owner, address);
-            List<String> contents = parseIds(tag.m_128461_("Contents"));
+            List<String> contents = parseIds(tag.getString("Contents"));
             if (!contents.isEmpty()) data.letterBoxContents.put(owner, new ArrayList<>(contents));
         }
 
-        ListTag drops = root.m_128437_("DropBoxes", COMPOUND_TAG_ID);
+        ListTag drops = root.getList("DropBoxes", COMPOUND_TAG_ID);
         for (int i = 0; i < drops.size(); i++) {
-            CompoundTag tag = drops.m_128728_(i);
+            CompoundTag tag = drops.getCompound(i);
             PostalAddress address = PostalAddress.load(tag);
             if (address == null) continue;
             data.dropBoxes.put(address.key(), address);
-            List<String> queue = parseIds(tag.m_128461_("Queue"));
+            List<String> queue = parseIds(tag.getString("Queue"));
             if (!queue.isEmpty()) data.dropBoxQueues.put(address.key(), new ArrayList<>(queue));
         }
 
@@ -120,49 +120,49 @@ public final class MailSavedData extends SavedData {
     }
 
     @Override
-    public CompoundTag m_7176_(CompoundTag root) {
+    public CompoundTag save(CompoundTag root) {
         ListTag known = new ListTag();
         for (Map.Entry<UUID, String> entry : canonicalNames.entrySet()) {
             CompoundTag tag = new CompoundTag();
-            tag.m_128362_("UUID", entry.getKey());
-            tag.m_128359_("Name", entry.getValue());
+            tag.putUUID("UUID", entry.getKey());
+            tag.putString("Name", entry.getValue());
             known.add(tag);
         }
-        root.m_128365_("KnownPlayers", known);
+        root.put("KnownPlayers", known);
 
         ListTag mail = new ListTag();
         for (MailRecord record : records.values()) mail.add(record.save());
-        root.m_128365_("Mail", mail);
+        root.put("Mail", mail);
 
-        if (courierUuid != null) root.m_128362_("CourierUUID", courierUuid);
-        if (courierHomeSet) root.m_128359_("CourierHome", courierHomeX + "," + courierHomeY + "," + courierHomeZ);
+        if (courierUuid != null) root.putUUID("CourierUUID", courierUuid);
+        if (courierHomeSet) root.putString("CourierHome", courierHomeX + "," + courierHomeY + "," + courierHomeZ);
         if (discordPanelMessageId != null && !discordPanelMessageId.isBlank()) {
-            root.m_128359_("DiscordPanelMessageId", discordPanelMessageId);
+            root.putString("DiscordPanelMessageId", discordPanelMessageId);
         }
 
         ListTag boxes = new ListTag();
         for (Map.Entry<UUID, PostalAddress> entry : letterBoxes.entrySet()) {
             CompoundTag tag = entry.getValue().save();
-            tag.m_128362_("Owner", entry.getKey());
+            tag.putUUID("Owner", entry.getKey());
             List<String> contents = letterBoxContents.get(entry.getKey());
-            if (contents != null && !contents.isEmpty()) tag.m_128359_("Contents", String.join(",", contents));
+            if (contents != null && !contents.isEmpty()) tag.putString("Contents", String.join(",", contents));
             boxes.add(tag);
         }
-        root.m_128365_("LetterBoxes", boxes);
+        root.put("LetterBoxes", boxes);
 
         ListTag drops = new ListTag();
         for (PostalAddress address : dropBoxes.values()) {
             CompoundTag tag = address.save();
             List<String> queue = dropBoxQueues.get(address.key());
-            if (queue != null && !queue.isEmpty()) tag.m_128359_("Queue", String.join(",", queue));
+            if (queue != null && !queue.isEmpty()) tag.putString("Queue", String.join(",", queue));
             drops.add(tag);
         }
-        root.m_128365_("DropBoxes", drops);
+        root.put("DropBoxes", drops);
         return root;
     }
 
     public void remember(ServerPlayer player) {
-        if (player != null) remember(player.m_20148_(), player.m_7755_().getString());
+        if (player != null) remember(player.getUUID(), player.getName().getString());
     }
 
     public void remember(UUID uuid, String name) {
@@ -174,7 +174,7 @@ public final class MailSavedData extends SavedData {
         if (oldName != null && !oldName.equalsIgnoreCase(clean)) knownPlayers.remove(oldName.toLowerCase(Locale.ROOT), uuid);
         if (!uuid.equals(oldUuid) || !clean.equals(oldName)) {
             namesCacheDirty = true;
-            m_77762_();
+            setDirty();
         }
     }
 
@@ -206,7 +206,7 @@ public final class MailSavedData extends SavedData {
         MailRecord previous = records.put(record.id, record);
         if (previous != null) removeFromIndexes(previous);
         addToIndexes(record);
-        m_77762_();
+        setDirty();
     }
 
     public MailRecord getRecord(String id) { return records.get(id); }
@@ -216,7 +216,7 @@ public final class MailSavedData extends SavedData {
         removeFromDropBoxRef(record.id);
         removeFromLetterBoxRef(record.id);
         removeFromIndexes(record);
-        m_77762_();
+        setDirty();
     }
 
     public List<MailRecord> pendingFor(UUID recipient) {
@@ -253,7 +253,7 @@ public final class MailSavedData extends SavedData {
         removeFromIndexes(record);
         record.state = state;
         addToIndexes(record);
-        m_77762_();
+        setDirty();
     }
 
     // ---- Letter Boxes ----
@@ -261,7 +261,7 @@ public final class MailSavedData extends SavedData {
     public void registerLetterBox(UUID owner, PostalAddress address) {
         if (owner == null || address == null) return;
         letterBoxes.put(owner, address);
-        m_77762_();
+        setDirty();
     }
 
     public PostalAddress letterBox(UUID owner) { return owner == null ? null : letterBoxes.get(owner); }
@@ -296,7 +296,7 @@ public final class MailSavedData extends SavedData {
                 addToIndexes(record);
             }
         }
-        m_77762_();
+        setDirty();
         return ids;
     }
 
@@ -310,7 +310,7 @@ public final class MailSavedData extends SavedData {
         List<String> contents = letterBoxContents.computeIfAbsent(record.recipientUuid, ignored -> new ArrayList<>());
         if (!contents.contains(record.id)) contents.add(record.id);
         boxedOwnerByMail.put(record.id, record.recipientUuid);
-        m_77762_();
+        setDirty();
         return true;
     }
 
@@ -335,7 +335,7 @@ public final class MailSavedData extends SavedData {
     public void registerDropBox(PostalAddress address) {
         if (address == null) return;
         dropBoxes.put(address.key(), address);
-        m_77762_();
+        setDirty();
     }
 
     public List<String> unregisterDropBox(PostalAddress address) {
@@ -345,7 +345,7 @@ public final class MailSavedData extends SavedData {
         List<String> ids = new ArrayList<>(dropBoxQueues.getOrDefault(key, List.of()));
         dropBoxQueues.remove(key);
         for (String id : ids) dropBoxByMail.remove(id);
-        m_77762_();
+        setDirty();
         return ids;
     }
 
@@ -358,7 +358,7 @@ public final class MailSavedData extends SavedData {
         if (queue.size() >= Math.max(1, capacity)) return false;
         if (!queue.contains(mailId)) queue.add(mailId);
         dropBoxByMail.put(mailId, address);
-        m_77762_();
+        setDirty();
         return true;
     }
 
@@ -366,7 +366,7 @@ public final class MailSavedData extends SavedData {
 
     public void pickupFromDropBox(String mailId) {
         removeFromDropBoxRef(mailId);
-        m_77762_();
+        setDirty();
     }
 
     public int dropBoxQueueSize(PostalAddress address) {
@@ -382,14 +382,14 @@ public final class MailSavedData extends SavedData {
         courierUuid = uuid;
         courierHomeSet = uuid != null;
         courierHomeX = x; courierHomeY = y; courierHomeZ = z;
-        m_77762_();
+        setDirty();
     }
 
     public void setCourierHome(double x, double y, double z) {
         if (courierUuid == null) return;
         courierHomeSet = true;
         courierHomeX = x; courierHomeY = y; courierHomeZ = z;
-        m_77762_();
+        setDirty();
     }
 
     public CourierHome courierHome() {
@@ -399,7 +399,7 @@ public final class MailSavedData extends SavedData {
     public void clearCourier() {
         courierUuid = null;
         courierHomeSet = false;
-        m_77762_();
+        setDirty();
     }
 
     public String discordPanelMessageId() { return discordPanelMessageId == null ? "" : discordPanelMessageId; }
@@ -408,7 +408,7 @@ public final class MailSavedData extends SavedData {
         String next = messageId == null ? "" : messageId.trim();
         if (!next.equals(discordPanelMessageId)) {
             discordPanelMessageId = next;
-            m_77762_();
+            setDirty();
         }
     }
 
@@ -525,18 +525,18 @@ public final class MailSavedData extends SavedData {
 
         public CompoundTag save() {
             CompoundTag tag = new CompoundTag();
-            tag.m_128359_("Dimension", dimension);
-            tag.m_128405_("X", x);
-            tag.m_128405_("Y", y);
-            tag.m_128405_("Z", z);
+            tag.putString("Dimension", dimension);
+            tag.putInt("X", x);
+            tag.putInt("Y", y);
+            tag.putInt("Z", z);
             return tag;
         }
 
         public static PostalAddress load(CompoundTag tag) {
             if (tag == null) return null;
-            String dimension = tag.m_128461_("Dimension");
+            String dimension = tag.getString("Dimension");
             if (dimension == null || dimension.isBlank()) return null;
-            return new PostalAddress(dimension, tag.m_128451_("X"), tag.m_128451_("Y"), tag.m_128451_("Z"));
+            return new PostalAddress(dimension, tag.getInt("X"), tag.getInt("Y"), tag.getInt("Z"));
         }
     }
 }

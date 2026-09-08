@@ -34,30 +34,30 @@ public final class MailRecord {
 
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
-        tag.m_128359_("Id", id);
-        tag.m_128362_("SenderUUID", senderUuid);
-        tag.m_128359_("SenderName", senderName);
-        tag.m_128362_("RecipientUUID", recipientUuid);
-        tag.m_128359_("RecipientName", recipientName);
-        tag.m_128359_("Message", message);
-        tag.m_128356_("SentAt", sentAt);
-        tag.m_128405_("State", state);
+        tag.putString("Id", id);
+        tag.putUUID("SenderUUID", senderUuid);
+        tag.putString("SenderName", senderName);
+        tag.putUUID("RecipientUUID", recipientUuid);
+        tag.putString("RecipientName", recipientName);
+        tag.putString("Message", message);
+        tag.putLong("SentAt", sentAt);
+        tag.putInt("State", state);
         return tag;
     }
 
     public static MailRecord load(CompoundTag tag) {
-        if (!tag.m_128403_("SenderUUID") || !tag.m_128403_("RecipientUUID")) return null;
-        String id = tag.m_128461_("Id");
+        if (!tag.hasUUID("SenderUUID") || !tag.hasUUID("RecipientUUID")) return null;
+        String id = tag.getString("Id");
         if (id == null || id.isBlank()) return null;
         return new MailRecord(
                 id,
-                tag.m_128342_("SenderUUID"),
-                tag.m_128461_("SenderName"),
-                tag.m_128342_("RecipientUUID"),
-                tag.m_128461_("RecipientName"),
-                tag.m_128461_("Message"),
-                tag.m_128454_("SentAt"),
-                tag.m_128451_("State")
+                tag.getUUID("SenderUUID"),
+                tag.getString("SenderName"),
+                tag.getUUID("RecipientUUID"),
+                tag.getString("RecipientName"),
+                tag.getString("Message"),
+                tag.getLong("SentAt"),
+                tag.getInt("State")
         );
     }
 }

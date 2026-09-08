@@ -49,11 +49,7 @@ jobs:
         with:
           gradle-version: '8.10'
 
-      - name: Convert legacy SRG identifiers to Mojang mappings
-        if: steps.meta.outputs.publish == 'true'
-        run: python scripts/migrate_srg_to_mojang.py src/main/java
-
-      - name: Verify mapped Java source
+      - name: Verify committed Mojang-mapped source
         if: steps.meta.outputs.publish == 'true'
         run: python scripts/check_legacy_srg.py src/main/java
 
