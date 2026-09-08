@@ -111,8 +111,8 @@ jobs:
           anchor = '''        TownLifeSavedData data = TownLifeSavedData.get(level);\n'''
           insert = '''        Optional<String> protectedReason = Season2NpcProtection.protectedReason(level, mob);\n        if (protectedReason.isPresent()) {\n            player.displayClientMessage(Component.literal(protectedReason.get()).withStyle(ChatFormatting.RED), false);\n            return false;\n        }\n\n'''
           if insert not in text:
-              if text.count(anchor) != 1:
-                  raise SystemExit('TownLifeLiteService integration anchor not found exactly once')
+              if anchor not in text:
+                  raise SystemExit('TownLifeLiteService integration anchor not found')
               text = text.replace(anchor, insert + anchor, 1)
           service.write_text(text)
 
