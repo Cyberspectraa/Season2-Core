@@ -1,94 +1,106 @@
 # Season2 Core
 
-Private-server gameplay systems for **Minecraft 1.20.1 Forge**, maintained for the Minecraft Season 2 server.
+Private-server gameplay systems for **Minecraft 1.20.1 Forge**.
 
-Season2 Core currently ships as one client + server JAR containing two Forge mod IDs:
+## Status
 
-- **`dragoncurrency`** — physical dragon-themed coins and the persistent Dragon Bank.
-- **`spectralmail`** — physical player mail, postal blocks, EasyNPC courier integration, Discord Post Office integration, and client-side letter presentation.
+- **Stable release:** `0.4.4-alpha.4`
+- **Current development line:** `0.5.0-alpha.5 — Town Life`
+- **Java:** 17
+- **Forge:** 47.4.x
+- **Distribution:** GitHub Releases
 
-## Current baseline
+The stable 0.4.4 release contains Dragon Currency and Spectral Mail. Town Life 0.7.1 has been validated in a combined runtime test and is being integrated properly into the source tree for 0.5.0.
 
-**Season2 Core 0.4.4-alpha.4** is the current repository baseline.
+## Modules
 
-Target environment:
+| Module | Purpose |
+| --- | --- |
+| `dragoncurrency` | Dragon-themed physical currency and persistent Dragon Bank |
+| `spectralmail` | Physical player mail, postal blocks, EasyNPC courier and Discord Post Office |
+| `townlife` | EasyNPC resident schedules, homes, workplaces, sleeping, needs and lightweight service errands |
 
-- Minecraft **1.20.1**
-- Minecraft Forge **47.4.x**
-- Java **17**
-- EasyNPC **7.10.0** integration
-- Combined client/server JAR
+Town Life remains intentionally lightweight: it decides **what** a resident should do and where it should go; EasyNPC/Minecraft remains responsible for actual navigation, doors and stairs.
 
-The tested release JAR and its verification/checksum files are in [`release/0.4.4-alpha.4`](release/0.4.4-alpha.4/).
+## Requirements
 
-## Dragon Currency
+### Stable 0.4.4
 
-Dragon Currency retains the stable `1.4.5` bank implementation.
+- Minecraft 1.20.1
+- Forge 47.4.x
+- Java 17
+- EasyNPC 7.10.x compatible setup
 
-Coin values:
+### 0.5.0 Town Life development
 
-| Coin | Value |
-| --- | ---: |
-| Copper Coin | 1 |
-| Silver Coin | 10 |
-| Gold Coin | 100 |
-| Platinum Coin | 1,000 |
-| Dragon Coin | 10,000 |
+- Minecraft 1.20.1
+- Forge 47.4.x
+- Java 17
+- EasyNPC `>=7.11.0` and `<8.0.0`
 
-The bank uses a persistent server-authoritative balance. The current intended bank flow is **deposit only**; withdrawals are deliberately not part of the current design.
+## Repository layout
 
-## Spectral Mail
+```text
+Season2-Core/
+├── .github/workflows/   GitHub Actions build
+├── docs/                development notes
+├── presets/             EasyNPC presets
+├── scripts/             source/build maintenance tools
+├── src/main/java/       mod source
+├── src/main/resources/  assets, data and Forge metadata
+├── build.gradle
+├── gradle.properties
+├── settings.gradle
+├── CHANGELOG.md
+├── ROADMAP.md
+└── README.md
+```
 
-Spectral Mail includes:
+Release JARs are stored in **GitHub Releases**, not committed into the repository.
 
-- Letter Paper, Addressed Letter, Sealed Letter and Opened Letter items.
-- Persistent/offline-safe mail records.
-- Public outgoing **Drop Boxes**.
-- Player-owned incoming **Letter Boxes**.
-- Letter Box-first courier routing with player fallback.
-- EasyNPC courier binding and movement integration.
-- Bundled courier skin and EasyNPC presets.
-- Parchment-style client letter reader.
-- Server-side Discord Post Office integration.
-- Directional postal models, model-matched voxel shapes, interaction sounds and particles.
+## Current gameplay systems
 
-The server owns authoritative mail state. Client code is only used where Minecraft/Forge requires client-side registered content or presentation.
+### Dragon Currency
 
-## EasyNPC presets
+- Copper, Silver, Gold, Platinum and Dragon coins
+- persistent server-authoritative bank balances
+- EasyNPC banker integration
+- current bank flow is deposit-only
 
-Ready-to-import presets are kept in [`presets/`](presets/) and are also bundled as data presets inside the mod resources.
+### Spectral Mail
 
-- `spectral_post_courier.npc.snbt`
-- `dragon_bank_banker.npc.snbt`
+- writable/addressable physical letters
+- public Drop Boxes
+- player-owned Letter Boxes
+- Letter Box-first courier delivery
+- EasyNPC courier integration
+- Discord Post Office integration
+- persistent offline-safe mail records
 
-The courier uses the bundled resource texture:
+### Town Life — 0.5 development
 
-`assets/spectralmail/textures/entity/postman.png`
+- Town Wand resident registration
+- real bed home assignment
+- workplace/job assignment
+- HOME / COMMUTING / WORK / ERRAND / SLEEPING states
+- real vanilla bed sleeping through `SleepService`
+- hunger, energy, fun and social needs
+- FOOD / TOOL / ARMOR service errands
+- automatic EasyNPC resident movement setup
+- local home/work roaming
+- Dev Clock schedule testing
+- specialised banker and courier NPCs remain outside generic Town Life control
 
-## Build status
+## Building
 
-The **0.4.4-alpha.4 runtime JAR is the known baseline**, but its source history came from a manual production/SRG compilation workflow. Some Java source therefore still contains production SRG method names.
+GitHub Actions uses Java 17 and ForgeGradle. The repository still contains legacy SRG-named source from the old manual build history, so CI currently performs the SRG-to-Mojang migration before compiling.
 
-Before major Town Life development, this project should be migrated to a normal **ForgeGradle + official mappings + Java 17** development build. See [`docs/BUILD_MIGRATION.md`](docs/BUILD_MIGRATION.md).
+Long-term cleanup is to commit the readable Mojang-mapped source directly and remove that conversion from ordinary builds.
 
-Until that migration is completed, do not assume a fresh IDE/ForgeGradle build of the legacy source will succeed without mapped-name cleanup.
+## Releases
 
-## Roadmap
-
-The next major development line is **0.5.0-alpha.5 — Town Life**: persistent EasyNPC residents with homes, jobs, social locations, schedules and lightweight role-driven routines.
-
-See [`ROADMAP.md`](ROADMAP.md).
-
-## Distribution
-
-The intended distribution route is GitHub Releases for the official Season2 Core JAR, with CurseForge modpack inclusion handled as an approved third-party/non-CurseForge file where applicable.
-
-See [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
+Use the repository's **Releases** page for official JAR downloads. Development build artifacts are produced by GitHub Actions when enabled by the active workflow.
 
 ## Security
 
-Never commit Discord bot tokens, production server configs, world saves, player data or secrets. See [`SECURITY.md`](SECURITY.md).
-
-## License
-
-See [`LICENSE`](LICENSE). The current project license remains unchanged from the 0.4.4 source baseline.
+Never commit Discord bot tokens, server configs containing secrets, world saves or private player data. See `SECURITY.md`.
