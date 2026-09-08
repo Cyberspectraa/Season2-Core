@@ -17,7 +17,6 @@ import net.minecraftforge.registries.RegistryObject;
 @Mod(SpectralMail.MODID)
 public final class SpectralMail {
     public static final String MODID = "spectralmail";
-    public static final String VERSION = "1.1.1-alpha.4";
 
     public static final DeferredRegister<Block> BLOCKS =
             DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
