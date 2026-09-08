@@ -27,6 +27,7 @@ minecraft {
             mods {
                 dragoncurrency { source sourceSets.main }
                 spectralmail { source sourceSets.main }
+                townlife { source sourceSets.main }
             }
         }
 
