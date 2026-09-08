@@ -12,6 +12,9 @@ This changelog tracks the combined Season2 Core development line.
 - Preserved all existing module IDs, item/block registry IDs and persistent data IDs.
 - Preserved Town Life's real-bed `SleepService`, schedule-state separation and EasyNPC/Minecraft-owned physical navigation.
 - Preserved the specialised Dragon Bank banker and bound Spectral Mail courier model rather than turning them into generic Town Life residents.
+- Committed the Java source permanently in readable Mojang mappings.
+- Removed the SRG-to-Mojang source rewrite from normal Forge build and release workflows.
+- Kept the legacy-SRG audit in CI so obfuscated method/field names are not accidentally reintroduced.
 
 ## 0.5.0-alpha.5 — Town Life
 
