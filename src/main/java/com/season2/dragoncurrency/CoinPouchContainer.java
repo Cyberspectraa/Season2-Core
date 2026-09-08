@@ -48,26 +48,26 @@ public final class CoinPouchContainer extends SimpleContainer {
         this.player = player;
 
         migrateLegacyInventory();
-        int savedSelected = wallet().m_128451_(SELECTED_KEY);
+        int savedSelected = wallet().getInt(SELECTED_KEY);
         this.selected = normalizeIndex(savedSelected);
         refreshVirtualSlots();
     }
 
     @Override
-    public boolean m_7013_(int slot, ItemStack stack) {
+    public boolean canPlaceItem(int slot, ItemStack stack) {
         return slot == DEPOSIT_SLOT && denominationIndex(stack) >= 0;
     }
 
     @Override
-    public void m_6836_(int slot, ItemStack stack) {
+    public void setItem(int slot, ItemStack stack) {
         if (refreshing) {
-            super.m_6836_(slot, stack);
+            super.setItem(slot, stack);
             return;
         }
 
         if (slot == DEPOSIT_SLOT) {
             deposit(stack);
-            super.m_6836_(DEPOSIT_SLOT, ItemStack.f_41583_);
+            super.setItem(DEPOSIT_SLOT, ItemStack.EMPTY);
             refreshVirtualSlots();
             return;
         }
@@ -78,44 +78,44 @@ public final class CoinPouchContainer extends SimpleContainer {
             return;
         }
 
-        super.m_6836_(slot, stack);
+        super.setItem(slot, stack);
     }
 
     @Override
-    public ItemStack m_7407_(int slot, int amount) {
+    public ItemStack removeItem(int slot, int amount) {
         if (slot == PREVIOUS_SLOT) {
             cycle(-1);
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
         if (slot == NEXT_SLOT) {
             cycle(1);
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
         if (slot == WITHDRAW_ONE_SLOT) {
             withdraw(1);
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
         if (slot == WITHDRAW_STACK_SLOT) {
             withdraw(64);
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
         if (slot == BALANCE_DISPLAY_SLOT) {
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
-        return super.m_7407_(slot, amount);
+        return super.removeItem(slot, amount);
     }
 
     @Override
-    public ItemStack m_8016_(int slot) {
+    public ItemStack removeItemNoUpdate(int slot) {
         if (isVirtualSlot(slot)) {
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
-        return super.m_8016_(slot);
+        return super.removeItemNoUpdate(slot);
     }
 
     public void cycle(int direction) {
         selected = normalizeIndex(selected + direction);
-        wallet().m_128405_(SELECTED_KEY, selected);
+        wallet().putInt(SELECTED_KEY, selected);
         refreshVirtualSlots();
     }
 
@@ -128,11 +128,11 @@ public final class CoinPouchContainer extends SimpleContainer {
 
         int amount = (int) Math.min((long) requested, balance);
         ItemStack withdrawn = new ItemStack(realCoin(selected), amount);
-        int before = withdrawn.m_41613_();
+        int before = withdrawn.getCount();
 
-        player.m_150109_().m_36054_(withdrawn);
+        player.getInventory().add(withdrawn);
 
-        int inserted = before - withdrawn.m_41613_();
+        int inserted = before - withdrawn.getCount();
         if (inserted > 0) {
             setBalance(selected, balance - inserted);
         }
@@ -154,7 +154,7 @@ public final class CoinPouchContainer extends SimpleContainer {
      * @return number of coins accepted
      */
     public int depositFromPlayerStack(ItemStack stack) {
-        if (stack == null || stack.m_41619_()) {
+        if (stack == null || stack.isEmpty()) {
             return 0;
         }
 
@@ -169,19 +169,19 @@ public final class CoinPouchContainer extends SimpleContainer {
             return 0;
         }
 
-        int accepted = (int) Math.min((long) stack.m_41613_(), remainingCapacity);
+        int accepted = (int) Math.min((long) stack.getCount(), remainingCapacity);
         if (accepted <= 0) {
             return 0;
         }
 
         setBalance(denomination, current + accepted);
-        stack.m_41774_(accepted);
+        stack.shrink(accepted);
         refreshVirtualSlots();
         return accepted;
     }
 
     private void deposit(ItemStack stack) {
-        if (stack == null || stack.m_41619_()) {
+        if (stack == null || stack.isEmpty()) {
             return;
         }
 
@@ -191,7 +191,7 @@ public final class CoinPouchContainer extends SimpleContainer {
         }
 
         long current = getBalance(denomination);
-        int count = stack.m_41613_();
+        int count = stack.getCount();
         if (count <= 0) {
             return;
         }
@@ -201,52 +201,52 @@ public final class CoinPouchContainer extends SimpleContainer {
     }
 
     private void migrateLegacyInventory() {
-        CompoundTag legacy = pouchStack.m_41737_(LEGACY_INVENTORY_TAG);
+        CompoundTag legacy = pouchStack.getTagElement(LEGACY_INVENTORY_TAG);
         if (legacy == null) {
             return;
         }
 
         for (int slot = 0; slot < LEGACY_SLOT_COUNT; slot++) {
-            CompoundTag slotTag = legacy.m_128469_("Slot" + slot);
-            ItemStack legacyStack = ItemStack.m_41712_(slotTag);
+            CompoundTag slotTag = legacy.getCompound("Slot" + slot);
+            ItemStack legacyStack = ItemStack.of(slotTag);
             int denomination = denominationIndex(legacyStack);
-            if (denomination >= 0 && !legacyStack.m_41619_()) {
+            if (denomination >= 0 && !legacyStack.isEmpty()) {
                 long current = getBalance(denomination);
-                int count = legacyStack.m_41613_();
+                int count = legacyStack.getCount();
                 long updated = current > Long.MAX_VALUE - count ? Long.MAX_VALUE : current + count;
                 setBalance(denomination, updated);
             }
         }
 
-        pouchStack.m_41749_(LEGACY_INVENTORY_TAG);
+        pouchStack.removeTagKey(LEGACY_INVENTORY_TAG);
     }
 
     private long getBalance(int denomination) {
-        long value = wallet().m_128454_(BALANCE_KEYS[denomination]);
+        long value = wallet().getLong(BALANCE_KEYS[denomination]);
         return Math.max(0L, value);
     }
 
     private void setBalance(int denomination, long value) {
-        wallet().m_128356_(BALANCE_KEYS[denomination], Math.max(0L, value));
+        wallet().putLong(BALANCE_KEYS[denomination], Math.max(0L, value));
     }
 
     private CompoundTag wallet() {
-        return pouchStack.m_41698_(WALLET_TAG);
+        return pouchStack.getOrCreateTagElement(WALLET_TAG);
     }
 
     private void refreshVirtualSlots() {
         refreshing = true;
         try {
-            super.m_6836_(PREVIOUS_SLOT, new ItemStack(DragonCurrency.PREVIOUS_BUTTON.get()));
-            super.m_6836_(NEXT_SLOT, new ItemStack(DragonCurrency.NEXT_BUTTON.get()));
-            super.m_6836_(WITHDRAW_ONE_SLOT, new ItemStack(DragonCurrency.WITHDRAW_ONE_BUTTON.get()));
-            super.m_6836_(WITHDRAW_STACK_SLOT, new ItemStack(DragonCurrency.WITHDRAW_STACK_BUTTON.get()));
-            super.m_6836_(BALANCE_DISPLAY_SLOT, makeBalanceDisplay());
-            super.m_6836_(DEPOSIT_SLOT, ItemStack.f_41583_);
+            super.setItem(PREVIOUS_SLOT, new ItemStack(DragonCurrency.PREVIOUS_BUTTON.get()));
+            super.setItem(NEXT_SLOT, new ItemStack(DragonCurrency.NEXT_BUTTON.get()));
+            super.setItem(WITHDRAW_ONE_SLOT, new ItemStack(DragonCurrency.WITHDRAW_ONE_BUTTON.get()));
+            super.setItem(WITHDRAW_STACK_SLOT, new ItemStack(DragonCurrency.WITHDRAW_STACK_BUTTON.get()));
+            super.setItem(BALANCE_DISPLAY_SLOT, makeBalanceDisplay());
+            super.setItem(DEPOSIT_SLOT, ItemStack.EMPTY);
         } finally {
             refreshing = false;
         }
-        super.m_6596_();
+        super.setChanged();
     }
 
     private ItemStack makeBalanceDisplay() {
@@ -255,7 +255,7 @@ public final class CoinPouchContainer extends SimpleContainer {
         String formatted = NumberFormat.getIntegerInstance(Locale.US).format(balance);
         String name = DISPLAY_NAMES[selected] + " Balance: " + formatted;
         String json = "{\"text\":\"" + name + "\",\"italic\":false,\"color\":\"" + DISPLAY_COLORS[selected] + "\"}";
-        display.m_41698_("display").m_128359_("Name", json);
+        display.getOrCreateTagElement("display").putString("Name", json);
         return display;
     }
 
@@ -272,10 +272,10 @@ public final class CoinPouchContainer extends SimpleContainer {
     }
 
     public static int denominationIndex(ItemStack stack) {
-        if (stack == null || stack.m_41619_()) {
+        if (stack == null || stack.isEmpty()) {
             return -1;
         }
-        Item item = stack.m_41720_();
+        Item item = stack.getItem();
         if (item == DragonCurrency.COPPER_COIN.get()) return 0;
         if (item == DragonCurrency.SILVER_COIN.get()) return 1;
         if (item == DragonCurrency.GOLD_COIN.get()) return 2;

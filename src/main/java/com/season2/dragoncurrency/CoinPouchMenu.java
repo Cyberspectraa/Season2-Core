@@ -20,7 +20,7 @@ public final class CoinPouchMenu extends DispenserMenu {
     }
 
     @Override
-    public void m_150399_(int slotIndex, int button, ClickType clickType, Player player) {
+    public void clicked(int slotIndex, int button, ClickType clickType, Player player) {
         if (slotIndex >= 0 && slotIndex < CoinPouchContainer.SLOT_COUNT) {
             if (slotIndex == CoinPouchContainer.PREVIOUS_SLOT) {
                 pouch.cycle(-1);
@@ -43,38 +43,38 @@ public final class CoinPouchMenu extends DispenserMenu {
             }
         }
 
-        super.m_150399_(slotIndex, button, clickType, player);
+        super.clicked(slotIndex, button, clickType, player);
     }
 
     @Override
-    public ItemStack m_7648_(Player player, int slotIndex) {
+    public ItemStack quickMoveStack(Player player, int slotIndex) {
         // The 3x3 pouch area contains controls/readouts plus one deposit slot.
         if (slotIndex >= 0 && slotIndex < CoinPouchContainer.SLOT_COUNT) {
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
 
         // Shift-clicking a coin deposits the entire stack directly into the
         // numerical wallet. Non-coins are intentionally ignored.
-        Slot slot = this.m_38853_(slotIndex);
-        if (slot == null || !slot.m_6657_()) {
-            return ItemStack.f_41583_;
+        Slot slot = this.getSlot(slotIndex);
+        if (slot == null || !slot.hasItem()) {
+            return ItemStack.EMPTY;
         }
 
-        ItemStack stack = slot.m_7993_();
+        ItemStack stack = slot.getItem();
         if (!CoinPouchContainer.isCoin(stack)) {
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
 
-        ItemStack original = stack.m_41777_();
+        ItemStack original = stack.copy();
         int deposited = pouch.depositFromPlayerStack(stack);
         if (deposited <= 0) {
-            return ItemStack.f_41583_;
+            return ItemStack.EMPTY;
         }
 
-        if (stack.m_41619_()) {
-            slot.m_5852_(ItemStack.f_41583_);
+        if (stack.isEmpty()) {
+            slot.set(ItemStack.EMPTY);
         } else {
-            slot.m_6654_();
+            slot.setChanged();
         }
 
         return original;

@@ -29,19 +29,19 @@ public final class SpectralMail {
             "letter_box", () -> new PostalBlock(PostalBlock.Kind.LETTER_BOX));
 
     public static final RegistryObject<Item> DROP_BOX_ITEM = ITEMS.register(
-            "drop_box", () -> new BlockItem(DROP_BOX.get(), new Item.Properties().m_41487_(16)));
+            "drop_box", () -> new BlockItem(DROP_BOX.get(), new Item.Properties().stacksTo(16)));
     public static final RegistryObject<Item> LETTER_BOX_ITEM = ITEMS.register(
-            "letter_box", () -> new BlockItem(LETTER_BOX.get(), new Item.Properties().m_41487_(16)));
+            "letter_box", () -> new BlockItem(LETTER_BOX.get(), new Item.Properties().stacksTo(16)));
 
     public static final RegistryObject<Item> LETTER_PAPER = ITEMS.register(
-            "letter_paper", () -> new Item(new Item.Properties().m_41487_(16)));
+            "letter_paper", () -> new Item(new Item.Properties().stacksTo(16)));
     public static final RegistryObject<Item> ADDRESSED_LETTER = ITEMS.register(
-            "addressed_letter", () -> new AddressedLetterItem(new Item.Properties().m_41487_(1)));
+            "addressed_letter", () -> new AddressedLetterItem(new Item.Properties().stacksTo(1)));
 
     public static final RegistryObject<Item> SEALED_LETTER = ITEMS.register(
-            "sealed_letter", () -> new LetterItem(true, new Item.Properties().m_41487_(1)));
+            "sealed_letter", () -> new LetterItem(true, new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> OPENED_LETTER = ITEMS.register(
-            "opened_letter", () -> new LetterItem(false, new Item.Properties().m_41487_(1)));
+            "opened_letter", () -> new LetterItem(false, new Item.Properties().stacksTo(1)));
 
     public SpectralMail() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();

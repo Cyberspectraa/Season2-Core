@@ -21,19 +21,19 @@ public final class BankAccount {
     private BankAccount() {}
 
     public static long getBalance(Player player) {
-        return Math.max(0L, data(player).m_128454_(BALANCE_KEY));
+        return Math.max(0L, data(player).getLong(BALANCE_KEY));
     }
 
     public static void setBalance(Player player, long balance) {
-        data(player).m_128356_(BALANCE_KEY, Math.max(0L, balance));
+        data(player).putLong(BALANCE_KEY, Math.max(0L, balance));
     }
 
     public static int getSelected(Player player) {
-        return normalize(data(player).m_128451_(SELECTED_KEY));
+        return normalize(data(player).getInt(SELECTED_KEY));
     }
 
     public static void setSelected(Player player, int selected) {
-        data(player).m_128405_(SELECTED_KEY, normalize(selected));
+        data(player).putInt(SELECTED_KEY, normalize(selected));
     }
 
     public static long deposit(Player player, int denomination, int requestedCoins) {
@@ -74,37 +74,37 @@ public final class BankAccount {
      */
     public static void migrateLegacyPouches(Player player) {
         CompoundTag account = data(player);
-        if (account.m_128451_(MIGRATED_KEY) == 1) return;
+        if (account.getInt(MIGRATED_KEY) == 1) return;
 
-        Inventory inventory = player.m_150109_();
+        Inventory inventory = player.getInventory();
         long migratedValue = 0L;
-        for (int slot = 0; slot < inventory.m_6643_(); slot++) {
-            ItemStack stack = inventory.m_8020_(slot);
-            if (stack == null || stack.m_41619_() || stack.m_41720_() != DragonCurrency.COIN_POUCH.get()) continue;
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack == null || stack.isEmpty() || stack.getItem() != DragonCurrency.COIN_POUCH.get()) continue;
 
-            CompoundTag wallet = stack.m_41737_(OLD_WALLET_TAG);
+            CompoundTag wallet = stack.getTagElement(OLD_WALLET_TAG);
             if (wallet == null) continue;
 
             for (int i = 0; i < OLD_BALANCE_KEYS.length; i++) {
-                long coinCount = Math.max(0L, wallet.m_128454_(OLD_BALANCE_KEYS[i]));
+                long coinCount = Math.max(0L, wallet.getLong(OLD_BALANCE_KEYS[i]));
                 if (coinCount <= 0L) continue;
                 long unit = COIN_VALUES[i];
                 long add = coinCount > Long.MAX_VALUE / unit ? Long.MAX_VALUE : coinCount * unit;
                 migratedValue = migratedValue > Long.MAX_VALUE - add ? Long.MAX_VALUE : migratedValue + add;
             }
-            stack.m_41749_(OLD_WALLET_TAG);
+            stack.removeTagKey(OLD_WALLET_TAG);
         }
 
         if (migratedValue > 0L) {
             long current = getBalance(player);
             setBalance(player, current > Long.MAX_VALUE - migratedValue ? Long.MAX_VALUE : current + migratedValue);
         }
-        account.m_128405_(MIGRATED_KEY, 1);
+        account.putInt(MIGRATED_KEY, 1);
     }
 
     public static int denominationIndex(ItemStack stack) {
-        if (stack == null || stack.m_41619_()) return -1;
-        Item item = stack.m_41720_();
+        if (stack == null || stack.isEmpty()) return -1;
+        Item item = stack.getItem();
         if (item == DragonCurrency.COPPER_COIN.get()) return 0;
         if (item == DragonCurrency.SILVER_COIN.get()) return 1;
         if (item == DragonCurrency.GOLD_COIN.get()) return 2;
@@ -135,10 +135,10 @@ public final class BankAccount {
 
     private static CompoundTag data(Player player) {
         CompoundTag root = player.getPersistentData();
-        CompoundTag persisted = root.m_128469_(PERSISTED_TAG);
-        CompoundTag mod = persisted.m_128469_(MOD_TAG);
-        persisted.m_128365_(MOD_TAG, mod);
-        root.m_128365_(PERSISTED_TAG, persisted);
+        CompoundTag persisted = root.getCompound(PERSISTED_TAG);
+        CompoundTag mod = persisted.getCompound(MOD_TAG);
+        persisted.put(MOD_TAG, mod);
+        root.put(PERSISTED_TAG, persisted);
         return mod;
     }
 

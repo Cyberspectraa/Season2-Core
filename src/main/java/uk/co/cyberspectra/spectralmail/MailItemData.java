@@ -25,57 +25,57 @@ public final class MailItemData {
     /** Visual-only envelope placed in the courier hand. It intentionally has no mail id or recipient UUID. */
     public static ItemStack courierVisual(MailRecord record) {
         ItemStack stack = new ItemStack(SpectralMail.SEALED_LETTER.get());
-        CompoundTag tag = stack.m_41784_();
-        tag.m_128359_(SENDER, record == null ? "Post Office" : record.senderName);
-        if (record != null) tag.m_128356_(SENT_AT, record.sentAt);
-        tag.m_128359_("SpectralMailCourierVisual", "1");
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putString(SENDER, record == null ? "Post Office" : record.senderName);
+        if (record != null) tag.putLong(SENT_AT, record.sentAt);
+        tag.putString("SpectralMailCourierVisual", "1");
         return stack;
     }
 
     public static ItemStack openedFrom(ItemStack original) {
         ItemStack stack = new ItemStack(SpectralMail.OPENED_LETTER.get());
-        CompoundTag originalTag = original == null ? null : original.m_41783_();
-        if (originalTag != null) stack.m_41751_(originalTag);
+        CompoundTag originalTag = original == null ? null : original.getTag();
+        if (originalTag != null) stack.setTag(originalTag);
         return stack;
     }
 
     public static void write(ItemStack stack, MailRecord record) {
-        CompoundTag tag = stack.m_41784_();
-        tag.m_128359_(ID, record.id);
-        tag.m_128359_(SENDER, record.senderName);
-        tag.m_128359_(RECIPIENT, record.recipientName);
-        tag.m_128362_(RECIPIENT_UUID, record.recipientUuid);
-        tag.m_128356_(SENT_AT, record.sentAt);
-        tag.m_128359_(MESSAGE, record.message);
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putString(ID, record.id);
+        tag.putString(SENDER, record.senderName);
+        tag.putString(RECIPIENT, record.recipientName);
+        tag.putUUID(RECIPIENT_UUID, record.recipientUuid);
+        tag.putLong(SENT_AT, record.sentAt);
+        tag.putString(MESSAGE, record.message);
     }
 
     public static String id(ItemStack stack) {
-        CompoundTag tag = stack == null ? null : stack.m_41783_();
-        return tag == null ? "" : tag.m_128461_(ID);
+        CompoundTag tag = stack == null ? null : stack.getTag();
+        return tag == null ? "" : tag.getString(ID);
     }
 
     public static String sender(ItemStack stack) {
-        CompoundTag tag = stack == null ? null : stack.m_41783_();
-        return tag == null ? "Unknown" : tag.m_128461_(SENDER);
+        CompoundTag tag = stack == null ? null : stack.getTag();
+        return tag == null ? "Unknown" : tag.getString(SENDER);
     }
 
     public static String recipient(ItemStack stack) {
-        CompoundTag tag = stack == null ? null : stack.m_41783_();
-        return tag == null ? "Unknown" : tag.m_128461_(RECIPIENT);
+        CompoundTag tag = stack == null ? null : stack.getTag();
+        return tag == null ? "Unknown" : tag.getString(RECIPIENT);
     }
 
     public static UUID recipientUuid(ItemStack stack) {
-        CompoundTag tag = stack == null ? null : stack.m_41783_();
-        return tag != null && tag.m_128403_(RECIPIENT_UUID) ? tag.m_128342_(RECIPIENT_UUID) : null;
+        CompoundTag tag = stack == null ? null : stack.getTag();
+        return tag != null && tag.hasUUID(RECIPIENT_UUID) ? tag.getUUID(RECIPIENT_UUID) : null;
     }
 
     public static long sentAt(ItemStack stack) {
-        CompoundTag tag = stack == null ? null : stack.m_41783_();
-        return tag == null ? 0L : tag.m_128454_(SENT_AT);
+        CompoundTag tag = stack == null ? null : stack.getTag();
+        return tag == null ? 0L : tag.getLong(SENT_AT);
     }
 
     public static String message(ItemStack stack) {
-        CompoundTag tag = stack == null ? null : stack.m_41783_();
-        return tag == null ? "" : tag.m_128461_(MESSAGE);
+        CompoundTag tag = stack == null ? null : stack.getTag();
+        return tag == null ? "" : tag.getString(MESSAGE);
     }
 }

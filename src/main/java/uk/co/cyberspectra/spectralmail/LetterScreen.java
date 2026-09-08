@@ -23,7 +23,7 @@ public final class LetterScreen extends Screen {
     private int page;
 
     public LetterScreen(ItemStack stack) {
-        super(Component.m_237113_("Letter"));
+        super(Component.literal("Letter"));
         String rawSender = MailItemData.sender(stack);
         this.sender = rawSender == null || rawSender.isBlank() ? "Unknown" : rawSender;
         long time = MailItemData.sentAt(stack);
@@ -33,7 +33,7 @@ public final class LetterScreen extends Screen {
     }
 
     @Override
-    protected void m_7856_() {
+    protected void init() {
         this.pages = paginate(message, 190, 12);
         if (this.page >= this.pages.size()) this.page = Math.max(0, this.pages.size() - 1);
     }
@@ -50,7 +50,7 @@ public final class LetterScreen extends Screen {
             StringBuilder current = new StringBuilder();
             for (String word : paragraph.split(" ")) {
                 String candidate = current.length() == 0 ? word : current + " " + word;
-                if (this.f_96547_.m_92895_(candidate) <= width || current.length() == 0) {
+                if (this.font.width(candidate) <= width || current.length() == 0) {
                     current.setLength(0);
                     current.append(candidate);
                 } else {
@@ -71,49 +71,49 @@ public final class LetterScreen extends Screen {
     }
 
     @Override
-    public void m_88315_(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int panelW = 246;
         int panelH = 196;
-        int left = (this.f_96543_ - panelW) / 2;
-        int top = (this.f_96544_ - panelH) / 2;
+        int left = (this.width - panelW) / 2;
+        int top = (this.height - panelH) / 2;
 
-        graphics.m_280509_(0, 0, this.f_96543_, this.f_96544_, 0xAA101010);
-        graphics.m_280509_(left, top, left + panelW, top + panelH, 0xFF4B3724);
-        graphics.m_280509_(left + 3, top + 3, left + panelW - 3, top + panelH - 3, 0xFFE6D2A2);
-        graphics.m_280509_(left + 8, top + 8, left + panelW - 8, top + panelH - 8, 0xFFF2E2B8);
+        graphics.fill(0, 0, this.width, this.height, 0xAA101010);
+        graphics.fill(left, top, left + panelW, top + panelH, 0xFF4B3724);
+        graphics.fill(left + 3, top + 3, left + panelW - 3, top + panelH - 3, 0xFFE6D2A2);
+        graphics.fill(left + 8, top + 8, left + panelW - 8, top + panelH - 8, 0xFFF2E2B8);
 
-        graphics.m_280137_(this.f_96547_, "Correspondence", left + panelW / 2, top + 15, 0x4A2C17);
-        graphics.m_280056_(this.f_96547_, "From: " + sender, left + 18, top + 32, 0x55351E, false);
-        graphics.m_280056_(this.f_96547_, sentAt, left + 18, top + 43, 0x6A5238, false);
-        graphics.m_280509_(left + 16, top + 57, left + panelW - 16, top + 58, 0xFFB89A67);
+        graphics.drawCenteredString(this.font, "Correspondence", left + panelW / 2, top + 15, 0x4A2C17);
+        graphics.drawString(this.font, "From: " + sender, left + 18, top + 32, 0x55351E, false);
+        graphics.drawString(this.font, sentAt, left + 18, top + 43, 0x6A5238, false);
+        graphics.fill(left + 16, top + 57, left + panelW - 16, top + 58, 0xFFB89A67);
 
         List<String> pageLines = pages.get(Math.max(0, Math.min(page, pages.size() - 1)));
         int y = top + 68;
         for (String line : pageLines) {
-            graphics.m_280056_(this.f_96547_, line, left + 28, y, 0x3B2A19, false);
+            graphics.drawString(this.font, line, left + 28, y, 0x3B2A19, false);
             y += 10;
         }
 
         String pageText = "Page " + (page + 1) + " / " + pages.size();
-        graphics.m_280137_(this.f_96547_, pageText, left + panelW / 2, top + 172, 0x5B432B);
+        graphics.drawCenteredString(this.font, pageText, left + panelW / 2, top + 172, 0x5B432B);
 
         if (page > 0) {
-            graphics.m_280509_(left + 18, top + 166, left + 66, top + 185, 0xFFD0B47B);
-            graphics.m_280137_(this.f_96547_, "< Prev", left + 42, top + 172, 0x3B2A19);
+            graphics.fill(left + 18, top + 166, left + 66, top + 185, 0xFFD0B47B);
+            graphics.drawCenteredString(this.font, "< Prev", left + 42, top + 172, 0x3B2A19);
         }
         if (page + 1 < pages.size()) {
-            graphics.m_280509_(left + panelW - 66, top + 166, left + panelW - 18, top + 185, 0xFFD0B47B);
-            graphics.m_280137_(this.f_96547_, "Next >", left + panelW - 42, top + 172, 0x3B2A19);
+            graphics.fill(left + panelW - 66, top + 166, left + panelW - 18, top + 185, 0xFFD0B47B);
+            graphics.drawCenteredString(this.font, "Next >", left + panelW - 42, top + 172, 0x3B2A19);
         }
     }
 
     @Override
-    public boolean m_6375_(double mouseX, double mouseY, int button) {
-        if (button != 0) return super.m_6375_(mouseX, mouseY, button);
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
         int panelW = 246;
         int panelH = 196;
-        int left = (this.f_96543_ - panelW) / 2;
-        int top = (this.f_96544_ - panelH) / 2;
+        int left = (this.width - panelW) / 2;
+        int top = (this.height - panelH) / 2;
         if (page > 0 && mouseX >= left + 18 && mouseX <= left + 66 && mouseY >= top + 166 && mouseY <= top + 185) {
             page--;
             return true;
@@ -122,11 +122,11 @@ public final class LetterScreen extends Screen {
             page++;
             return true;
         }
-        return super.m_6375_(mouseX, mouseY, button);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean m_7933_(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 263 && page > 0) {
             page--;
             return true;
@@ -135,6 +135,6 @@ public final class LetterScreen extends Screen {
             page++;
             return true;
         }
-        return super.m_7933_(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 }

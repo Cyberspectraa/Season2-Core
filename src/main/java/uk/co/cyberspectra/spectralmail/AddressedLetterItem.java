@@ -14,10 +14,10 @@ public final class AddressedLetterItem extends Item {
     }
 
     @Override
-    public void m_7373_(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        super.m_7373_(stack, level, tooltip, flag);
+    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
         String recipient = DraftLetterData.recipientName(stack);
-        tooltip.add(Component.m_237113_("To: " + (recipient == null || recipient.isBlank() ? "Unknown" : recipient)));
-        tooltip.add(Component.m_237113_("Ready to post in a Drop Box"));
+        tooltip.add(Component.literal("To: " + (recipient == null || recipient.isBlank() ? "Unknown" : recipient)));
+        tooltip.add(Component.literal("Ready to post in a Drop Box"));
     }
 }

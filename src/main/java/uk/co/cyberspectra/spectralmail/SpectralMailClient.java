@@ -14,6 +14,6 @@ public final class SpectralMailClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         // No enqueueWork is required: this only installs an in-memory presentation callback.
-        ClientBridge.setOpener(stack -> Minecraft.m_91087_().m_91152_(new LetterScreen(stack)));
+        ClientBridge.setOpener(stack -> Minecraft.getInstance().setScreen(new LetterScreen(stack)));
     }
 }

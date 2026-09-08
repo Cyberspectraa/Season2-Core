@@ -29,7 +29,7 @@ public final class MailEvents {
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            MailSavedData data = MailSavedData.get(player.m_20194_());
+            MailSavedData data = MailSavedData.get(player.getServer());
             data.remember(player);
             MailDelivery.routePending(player);
         }
