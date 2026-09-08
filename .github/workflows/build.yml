@@ -2,7 +2,7 @@ name: Forge build
 
 on:
   push:
-    branches: [ main, townlife-integration ]
+    branches: [ main ]
   pull_request:
   workflow_dispatch:
 
@@ -36,10 +36,7 @@ jobs:
           test "$JAVA_COUNT" -gt 0
           test "$RESOURCE_COUNT" -gt 0
 
-      - name: Convert legacy SRG identifiers to Mojang mappings
-        run: python scripts/migrate_srg_to_mojang.py src/main/java
-
-      - name: Verify mapped Java source
+      - name: Verify committed Mojang-mapped source
         run: python scripts/check_legacy_srg.py src/main/java
 
       - name: Build Forge JAR
