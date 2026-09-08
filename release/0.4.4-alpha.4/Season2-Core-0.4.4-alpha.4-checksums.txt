@@ -1,8 +1,0 @@
-49a34a3f36f6798fe900986acd24fbfab07f2db2557a10a3cba20192d6a7f5b7  Season2-Core-0.4.4-alpha.4-forge-1.20.1.jar
-5c68bd964e37ba5cc12038cf84211b4e1a765b7a8cccdd4557edbf9431255eb0  Season2-Core-0.4.4-alpha.4-source.zip
-0aa2123ff9239b7f8a6b5133f486c8c3d1983d44ab9f8a4e99304234627d6507  Season2-Core-0.4.4-alpha.4-verification.txt
-dd10d785d95dffa2aa0f12d6234f7cc4789edd3b245714d031386b423c01786e  Season2-Core-0.4.4-alpha.4-TESTING.md
-c0329fe908c4d8367cd8ef84c33ed008ae2d63bf53ea34a1f78ebc6814c10a08  spectral_post_courier-0.4.4.npc.snbt
-1827470b078006623d9581aa16cad6d32843862f92ec9a05cbf765820baa8e65  dragon_bank_banker-0.4.4.npc.snbt
-14f01495cd94726252efe39e0ac3ccf35801e2355e0d800722ebc63fbfe54d0b  Season2-Core-0.4.4-alpha.4-EasyNPC-presets.zip
-26c495c257103bad03f3cb84a8f3ce89606bf899551d2ba0cc74a61c0c6bd914  Season2-Core-0.4.4-alpha.4-NPC-SETUP.txt

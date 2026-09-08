@@ -1,67 +1,78 @@
 # Roadmap
 
-## 0.5.0-alpha.5 — Town Life foundation
+## 0.5.0-alpha.5 — Town Life integration
 
-The next major feature is a lightweight persistent town-life director for EasyNPC residents.
+Town Life 0.7.1 has now been validated in a combined runtime test with Dragon Currency and Spectral Mail.
 
-Planned first-stage scope:
+The immediate goal is to convert that successful test into a proper single-source ForgeGradle build.
 
-1. Persistent Town NPC registration by EasyNPC UUID.
-2. Per-NPC home location.
-3. Per-NPC work location.
-4. Optional social/activity location.
-5. Minecraft-time schedule phases.
-6. Role templates such as `resident`, `worker` and `guard`.
-7. Lightweight movement requests rather than continuous per-tick decision logic.
-8. Return-home behavior and safe schedule reconciliation after chunks reload.
-9. Admin status/debug commands.
-10. Restart persistence and recovery behavior.
+### Integration checklist
 
-The existing banker and postal courier remain specialized systems initially; the generic Town Life scheduler must not take over their behavior.
+1. Merge Town Life 0.7.1 source into the Season2 Core source tree.
+2. Preserve the `townlife` mod ID, registry IDs and SavedData ID for compatibility.
+3. Preserve the working `SleepService` real-bed implementation.
+4. Keep EasyNPC/Minecraft responsible for physical pathfinding, stairs and doors.
+5. Keep the Dragon Bank banker and Spectral Mail courier outside generic Town Life scheduling.
+6. Require EasyNPC `>=7.11.0` and `<8.0.0` for the Town Life development line.
+7. Build the combined JAR through GitHub Actions.
+8. Run client/server regression testing.
+9. Merge the integration branch into `main` once the source-built JAR matches the working runtime test.
 
-## Build-system milestone — must happen before large Town Life code growth
+## Town Life foundation already proven
 
-Move the codebase from manual production/SRG compilation to a normal ForgeGradle development build:
+- Town Wand resident registration
+- real bed home assignment
+- workplace/job assignment
+- HOME / COMMUTING / WORK / ERRAND / SLEEPING states
+- local wandering only while settled at HOME or WORK
+- real vanilla bed sleeping and wake handling
+- hunger, energy, fun and social needs
+- FOOD / TOOL / ARMOR service errands
+- provider availability and reservation logic
+- hostile-mob safety interruption
+- player-interaction pause
+- Dev Clock schedule testing
 
-- Minecraft 1.20.1
-- Forge 47.4.x
-- Java 17 toolchain
-- official mappings
-- no hand-authored Minecraft/Brigadier stubs
-- automated compile verification
-- dedicated-server smoke test
-- client launch smoke test
-- release artifact/checksum generation
+## Design rule
 
-See `docs/BUILD_MIGRATION.md`.
+Season2 Core should **not become a custom NPC pathfinding mod**.
 
-## Later Town Life expansion
+Town Life controls:
 
-After the foundation is proven on the real server, add reusable roles such as:
+- destination
+- schedule
+- intention
+- resident state
 
-- blacksmith
-- farmer
-- fisherman
-- shopkeeper
-- innkeeper
-- librarian
-- guard patrol variants
-- healer/priest
+EasyNPC/Minecraft controls:
 
-Possible polish after stability:
+- path calculation
+- stairs
+- doors
+- physical movement
 
-- role/time/weather-aware ambient dialogue
-- controlled local wandering around work/home anchors
-- explicit guard patrol waypoints
-- shared town social locations
-- admin visual/debug markers
-- data-driven role templates
+The obsolete custom staircase scanners, staged-navigation systems, travel hops and custom door service should not be restored without a compelling reason.
 
-## Longer-term Season2 Core polish
+## After 0.5.0 is stable
 
-- Mail/admin recovery and diagnostic commands.
-- Stronger SavedData schema/version migration.
-- Transaction/audit logging for bank operations.
-- Config validation with clear startup warnings.
-- Optional localization and data/resource-pack customization.
-- GitHub release automation after ForgeGradle migration.
+Possible Town Life expansion:
+
+- richer professions
+- blacksmith services
+- taverns and food providers
+- guards and patrol behaviour
+- NPC conversations and social interactions
+- Dragon Currency service/payment integration
+- Spectral Mail NPC integration
+- town events
+- data-driven profession templates
+
+## Build-system cleanup
+
+After Town Life integration is stable:
+
+- commit Mojang-mapped readable Java source directly
+- remove SRG conversion from ordinary CI builds
+- standardise module/release version metadata
+- keep release binaries in GitHub Releases rather than the source repository
+- automate release JAR/checksum generation
