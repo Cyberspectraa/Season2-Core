@@ -1,0 +1,54 @@
+name: Commit Mojang-mapped source
+
+on:
+  push:
+    branches: [ mojang-mappings-cleanup ]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event.head_commit.message != 'Commit Mojang-mapped source'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout cleanup branch
+        uses: actions/checkout@v5
+        with:
+          ref: mojang-mappings-cleanup
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '8.10'
+
+      - name: Convert legacy SRG identifiers once
+        run: python scripts/migrate_srg_to_mojang.py src/main/java
+
+      - name: Verify source is fully Mojang-mapped
+        run: python scripts/check_legacy_srg.py src/main/java
+
+      - name: Verify mapped source builds
+        run: gradle --no-daemon build
+
+      - name: Commit readable mapped source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- src/main/java; then
+            echo "No source changes were produced."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main/java
+          git commit -m "Commit Mojang-mapped source"
+          git push origin HEAD:mojang-mappings-cleanup
