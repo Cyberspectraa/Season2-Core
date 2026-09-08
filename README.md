@@ -80,9 +80,9 @@ The 0.6 development line keeps all existing module IDs, registry IDs and persist
 
 ## Building
 
-GitHub Actions uses Java 17 and ForgeGradle. The repository still contains legacy SRG-named source from the old manual build history, so CI currently performs the SRG-to-Mojang migration before compiling.
+GitHub Actions uses Java 17 and ForgeGradle against the readable Mojang-mapped Java source committed directly in the repository. Normal build and release workflows now audit for accidental legacy SRG identifiers and compile without rewriting source files first.
 
-The next build-system cleanup is to commit the readable Mojang-mapped Java source directly and then remove the source-rewrite step from ordinary CI.
+The one-time SRG-to-Mojang migration script is retained only as maintenance history/tooling; it is no longer part of ordinary CI or release builds.
 
 ## Releases
 
