@@ -19,6 +19,6 @@ public final class TownLife {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         ModItems.ITEMS.register(modBus);
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, TownLifeConfig.SPEC);
-        LOGGER.info("Town Life Lite initialized.");
+        LOGGER.info("Town Life initialized as part of Season2 Core.");
     }
 }
