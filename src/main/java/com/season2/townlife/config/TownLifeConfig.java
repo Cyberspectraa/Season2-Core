@@ -15,6 +15,10 @@ public final class TownLifeConfig {
     public static final ForgeConfigSpec.DoubleValue WALK_SPEED;
     public static final ForgeConfigSpec.DoubleValue INDOOR_WALK_SPEED;
     public static final ForgeConfigSpec.DoubleValue EMERGENCY_WALK_SPEED;
+    public static final ForgeConfigSpec.IntValue PATH_ENTRY_RADIUS;
+    public static final ForgeConfigSpec.IntValue PATH_WAYPOINT_SPACING;
+    public static final ForgeConfigSpec.IntValue PATH_BULK_REGISTER_LIMIT;
+    public static final ForgeConfigSpec.IntValue PATH_ROUTE_SEARCH_LIMIT;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -48,6 +52,18 @@ public final class TownLifeConfig {
         EMERGENCY_WALK_SPEED = builder
                 .comment("Faster pace used only when fleeing nearby hostile mobs.")
                 .defineInRange("emergencyWalkSpeed", 0.82D, 0.40D, 1.40D);
+        PATH_ENTRY_RADIUS = builder
+                .comment("Maximum horizontal distance from an NPC/destination to a registered Town Path before road routing is used.")
+                .defineInRange("pathEntryRadius", 16, 4, 32);
+        PATH_WAYPOINT_SPACING = builder
+                .comment("Maximum straight-road spacing between high-level road waypoints. Corners are always kept.")
+                .defineInRange("pathWaypointSpacing", 5, 2, 12);
+        PATH_BULK_REGISTER_LIMIT = builder
+                .comment("Maximum connected matching path blocks the Path Wand may register in one click.")
+                .defineInRange("pathBulkRegisterLimit", 4096, 64, 16384);
+        PATH_ROUTE_SEARCH_LIMIT = builder
+                .comment("Safety cap for registered road nodes considered while planning one Town Path route.")
+                .defineInRange("pathRouteSearchLimit", 20000, 512, 100000);
         builder.pop();
 
         SPEC = builder.build();

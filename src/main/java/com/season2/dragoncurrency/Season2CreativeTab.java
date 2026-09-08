@@ -40,6 +40,7 @@ public final class Season2CreativeTab {
 
                         // Town Life administration and setup tools.
                         output.accept(ModItems.TOWN_WAND.get());
+                        output.accept(ModItems.PATH_WAND.get());
                         output.accept(ModItems.DEV_CLOCK.get());
                     })
                     .build()

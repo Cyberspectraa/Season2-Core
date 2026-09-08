@@ -7,6 +7,7 @@ import com.season2.townlife.item.DevClockItem;
 import com.season2.townlife.registry.ModItems;
 import com.season2.townlife.runtime.TownLifeLiteService;
 import com.season2.townlife.runtime.TownLifeManager;
+import com.season2.townlife.runtime.TownPathManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -31,7 +32,10 @@ public final class TownLifeEvents {
     @SubscribeEvent
     public static void onLevelTick(TickEvent.LevelTickEvent event) {
         if (event.phase != TickEvent.Phase.END || event.level.isClientSide) return;
-        if (event.level instanceof ServerLevel level) TownLifeManager.tick(level);
+        if (event.level instanceof ServerLevel level) {
+            TownLifeManager.tick(level);
+            TownPathManager.tick(level);
+        }
     }
 
     @SubscribeEvent
@@ -58,6 +62,7 @@ public final class TownLifeEvents {
 
         if (TownLifeSavedData.get(level).resident(mob.getUUID()).isEmpty()) return;
         TownLifeManager.pauseForInteraction(level, mob.getUUID(), mob, player);
+        TownPathManager.suspend(mob.getUUID(), level.getGameTime() + 160L);
     }
 
     @SubscribeEvent
