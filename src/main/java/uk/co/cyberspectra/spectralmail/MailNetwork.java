@@ -55,7 +55,9 @@ public final class MailNetwork {
 
         List<ComposeRecipient> recipients = new ArrayList<>();
         for (MailSavedData.KnownPlayer known : data.knownPlayersAlphabetical()) {
-            if (known.uuid().equals(player.getUUID())) continue;
+            // Self-addressed mail is intentionally valid. Besides being useful for
+            // testing in singleplayer, it is harmless because the server still
+            // validates the physical paper and normal Drop Box/courier flow.
             recipients.add(new ComposeRecipient(known.uuid(), known.name()));
             if (recipients.size() >= MAX_RECIPIENTS) break;
         }
@@ -88,10 +90,6 @@ public final class MailNetwork {
         if (message.length() > config.maxMessageLength) {
             sender.displayClientMessage(Component.literal(
                     "That letter is too long. Maximum: " + config.maxMessageLength + " characters."), false);
-            return;
-        }
-        if (recipientUuid.equals(sender.getUUID())) {
-            sender.displayClientMessage(Component.literal("Pick another player as the recipient."), false);
             return;
         }
 
