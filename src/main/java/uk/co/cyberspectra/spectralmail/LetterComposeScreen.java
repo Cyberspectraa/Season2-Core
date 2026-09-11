@@ -72,16 +72,29 @@ public final class LetterComposeScreen extends Screen {
     }
 
     private void applyFilter(String query) {
-        String needle = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        String cleanQuery = query == null ? "" : query.trim();
+        String needle = cleanQuery.toLowerCase(Locale.ROOT);
         List<ComposeRecipient> filtered = new ArrayList<>();
+        ComposeRecipient exact = null;
         for (ComposeRecipient recipient : this.recipients) {
             if (needle.isEmpty() || recipient.name().toLowerCase(Locale.ROOT).contains(needle)) {
                 filtered.add(recipient);
+            }
+            if (!cleanQuery.isEmpty() && recipient.name().equalsIgnoreCase(cleanQuery)) {
+                exact = recipient;
             }
         }
         this.filteredRecipients = List.copyOf(filtered);
         int pageCount = pageCount();
         if (recipientPage >= pageCount) recipientPage = Math.max(0, pageCount - 1);
+
+        // Make the common singleplayer / exact-name flow require no extra tiny
+        // list click, while still avoiding accidental selection for broad searches.
+        if (exact != null) {
+            this.selected = exact;
+        } else if (cleanQuery.isEmpty() && this.filteredRecipients.size() == 1) {
+            this.selected = this.filteredRecipients.get(0);
+        }
     }
 
     private int pageCount() {
@@ -114,7 +127,7 @@ public final class LetterComposeScreen extends Screen {
         graphics.drawString(this.font, "Message", rightX, top + 37, 0x55351E, false);
 
         if (this.filteredRecipients.isEmpty()) {
-            graphics.drawString(this.font, "No known players", left + 23, top + 68, 0x7A5B3B, false);
+            graphics.drawString(this.font, "No matching players", left + 23, top + 68, 0x7A5B3B, false);
         } else {
             int start = this.recipientPage * RECIPIENT_ROWS;
             int end = Math.min(this.filteredRecipients.size(), start + RECIPIENT_ROWS);
@@ -145,12 +158,11 @@ public final class LetterComposeScreen extends Screen {
         }
 
         String selectedName = this.selected == null ? "None" : this.selected.name();
-        graphics.drawString(this.font, "To: " + this.font.plainSubstrByWidth(selectedName, 168),
+        graphics.drawString(this.font, "To: " + this.font.plainSubstrByWidth(selectedName, 108),
                 rightX, top + 181, 0x55351E, false);
-        int chars = this.messageBox == null ? 0 : this.messageBox.getValue().length();
-        graphics.drawString(this.font, chars + " / " + this.maxLength,
-                rightX + 164, top + 181, chars > this.maxLength ? 0xAA2222 : 0x6A5238, false);
 
+        // MultiLineEditBox already renders its own character counter when a
+        // limit is configured. Do not draw a second counter over it.
         if (this.addressButton != null) {
             this.addressButton.active = this.selected != null && this.messageBox != null
                     && !this.messageBox.getValue().trim().isEmpty()
