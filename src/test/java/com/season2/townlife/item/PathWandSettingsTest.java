@@ -3,35 +3,23 @@ package com.season2.townlife.item;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.season2.townlife.data.TownPathType;
-import net.minecraft.SharedConstants;
-import net.minecraft.server.Bootstrap;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import org.junit.jupiter.api.BeforeAll;
+import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.Test;
 
 final class PathWandSettingsTest {
-    @BeforeAll
-    static void bootstrapMinecraftRegistries() {
-        SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
-    }
-
     @Test
-    void settingsRoundTripOnTheWandStack() {
-        ItemStack stack = new ItemStack(Items.STICK);
+    void settingsRoundTripInWandNbt() {
+        CompoundTag tag = new CompoundTag();
 
-        PathWandSettings.set(stack, PathEditMode.REMOVE_CONNECTED, TownPathType.AVOID);
+        PathWandSettings.set(tag, PathEditMode.REMOVE_CONNECTED, TownPathType.AVOID);
 
-        assertEquals(PathEditMode.REMOVE_CONNECTED, PathWandSettings.mode(stack));
-        assertEquals(TownPathType.AVOID, PathWandSettings.type(stack));
+        assertEquals(PathEditMode.REMOVE_CONNECTED, PathWandSettings.mode(tag));
+        assertEquals(TownPathType.AVOID, PathWandSettings.type(tag));
     }
 
     @Test
     void freshWandDefaultsToConnectedNormalPath() {
-        ItemStack stack = new ItemStack(Items.STICK);
-
-        assertEquals(PathEditMode.ADD_CONNECTED, PathWandSettings.mode(stack));
-        assertEquals(TownPathType.NORMAL, PathWandSettings.type(stack));
+        assertEquals(PathEditMode.ADD_CONNECTED, PathWandSettings.mode((CompoundTag) null));
+        assertEquals(TownPathType.NORMAL, PathWandSettings.type((CompoundTag) null));
     }
 }
