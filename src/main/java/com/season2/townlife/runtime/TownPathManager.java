@@ -6,12 +6,12 @@ import com.season2.townlife.data.Town;
 import com.season2.townlife.data.TownLifeSavedData;
 import com.season2.townlife.data.TownLocation;
 import com.season2.townlife.data.TownPathSavedData;
+import com.season2.townlife.data.TownPathType;
 import com.season2.townlife.logic.Activity;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -51,7 +51,7 @@ public final class TownPathManager {
         }
 
         TownLifeSavedData townData = TownLifeSavedData.get(level);
-        Set<Long> packedPaths = pathData.packedPositions();
+        Map<Long, TownPathType> typedPaths = pathData.typedPositions();
         for (Resident resident : townData.residents()) {
             UUID uuid = resident.entityUuid();
             Entity entity = level.getEntity(uuid);
@@ -103,7 +103,7 @@ public final class TownPathManager {
             if (state.waypoints.isEmpty()) {
                 if (gameTime < state.retryAt) continue;
                 state.waypoints = TownPathRouter.route(
-                        packedPaths,
+                        typedPaths,
                         mob.blockPosition(),
                         destination.anchor(),
                         TownLifeConfig.PATH_ENTRY_RADIUS.get(),
@@ -177,8 +177,6 @@ public final class TownPathManager {
     }
 
     private static void releaseRoadControl(Mob mob) {
-        // Remove the temporary waypoint home/objective. TownLifeManager resumes
-        // its normal short final approach to the actual bed/work/provider target.
         EasyNpcCompat.enterStationaryState(mob);
         mob.getNavigation().stop();
     }
