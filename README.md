@@ -80,17 +80,30 @@ Old Dragon Currency pouch GUI helper items remain registered only for registry/w
 
 The operator-only Path Wand registers explicit road surface blocks. Normal Town Life travel prefers those registered roads when both the NPC and destination are close enough to the same connected road network.
 
-- right-click a walkable surface to register connected blocks of the same block type
-- one-block height changes are included so sloped/stair roads can remain connected
-- sneak + right-click removes only the clicked registered road block
-- right-click air highlights nearby registered road blocks
-- road data is stored separately per dimension in `townlife_paths.dat`
-- emergency shelter movement bypasses roads
-- Town Life plans road waypoints only; EasyNPC/Minecraft still performs the actual walking
+Right-click air with the Path Wand to open its configuration screen. The selected settings are stored on that wand item.
+
+Editing modes:
+
+- **Add Connected** — register/retype connected walkable blocks of the same block type
+- **Add Single** — register/retype only the clicked block
+- **Remove Single** — remove only the clicked registered path block
+- **Remove Connected** — remove the connected section matching the clicked path type and block material
+- **Inspect** — report the clicked block's path type and highlight nearby paths
+
+Path priorities:
+
+- **Main Road** — strongest routing preference
+- **Normal Path** — standard routing cost and the automatic type used for old path saves
+- **Low Priority** — usable, but less attractive than normal roads
+- **Avoid** — heavily penalised while remaining available if it is still the best practical registered route
+
+The configuration screen also has **Highlight Nearby**, which displays different particle styles for each path priority. One-block height changes remain connected for sloped/stair roads. Road data is still stored separately per dimension in `townlife_paths.dat`, and older untyped path saves migrate automatically to Normal Path.
+
+Emergency shelter movement continues to bypass roads. Town Life only plans the preferred high-level road waypoints; EasyNPC/Minecraft still performs the physical walking, doors, stairs and collision handling.
 
 ## Compatibility rules
 
-The 0.7 development line keeps all existing module IDs, registry IDs and persistent data IDs intact. Town Paths adds `townlife:path_wand` and a separate `townlife_paths.dat`; it does not rewrite existing resident, bank or mail data.
+The 0.7 development line keeps all existing module IDs, registry IDs and persistent data IDs intact. Town Paths uses `townlife:path_wand` and `townlife_paths.dat`; the typed-path save upgrade keeps the same SavedData ID and migrates version-1 registered paths to Normal Path without rewriting resident, bank or mail data.
 
 ## Building
 

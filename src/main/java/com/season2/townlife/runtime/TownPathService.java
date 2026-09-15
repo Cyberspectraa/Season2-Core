@@ -2,15 +2,18 @@ package com.season2.townlife.runtime;
 
 import com.season2.townlife.config.TownLifeConfig;
 import com.season2.townlife.data.TownPathSavedData;
+import com.season2.townlife.data.TownPathType;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -27,11 +30,14 @@ public final class TownPathService {
     private TownPathService() {}
 
     public static void registerConnected(ServerLevel level, ServerPlayer player, BlockPos clicked) {
+        registerConnected(level, player, clicked, TownPathType.NORMAL);
+    }
+
+    public static void registerConnected(ServerLevel level, ServerPlayer player, BlockPos clicked, TownPathType type) {
         if (!level.hasChunkAt(clicked)) return;
         BlockState seedState = level.getBlockState(clicked);
         if (seedState.isAir() || !isWalkableSurface(level, clicked)) {
-            player.displayClientMessage(Component.literal("That block is not a usable path surface; it needs clear walking space above it.")
-                    .withStyle(ChatFormatting.RED), true);
+            invalidSurface(player);
             return;
         }
 
@@ -67,14 +73,28 @@ public final class TownPathService {
         }
 
         TownPathSavedData data = TownPathSavedData.get(level);
-        int added = data.addAll(connected);
+        int changed = data.setAll(connected, type);
         boolean truncated = !open.isEmpty();
         String suffix = truncated ? " (scan stopped at safety limit)" : "";
         player.displayClientMessage(Component.literal(
-                "Town Path: registered " + added + " new block" + (added == 1 ? "" : "s")
-                        + " • " + data.count() + " total" + suffix)
+                "Town Path: updated " + changed + " block" + (changed == 1 ? "" : "s")
+                        + " as " + safe(type).displayName() + " • " + data.count() + " total" + suffix)
                 .withStyle(truncated ? ChatFormatting.YELLOW : ChatFormatting.GREEN), true);
         inspectNearby(level, player);
+    }
+
+    public static void registerSingle(ServerLevel level, ServerPlayer player, BlockPos clicked, TownPathType type) {
+        if (!level.hasChunkAt(clicked) || !isWalkableSurface(level, clicked)) {
+            invalidSurface(player);
+            return;
+        }
+        TownPathSavedData data = TownPathSavedData.get(level);
+        int changed = data.setAll(List.of(clicked.immutable()), type);
+        player.displayClientMessage(Component.literal(
+                "Town Path: " + (changed == 0 ? "already " : "set ") + safe(type).displayName()
+                        + " • " + data.count() + " total")
+                .withStyle(ChatFormatting.GREEN), true);
+        highlight(level, clicked, safe(type), 4);
     }
 
     public static void removeSingle(ServerLevel level, ServerPlayer player, BlockPos clicked) {
@@ -90,18 +110,116 @@ public final class TownPathService {
         inspectNearby(level, player);
     }
 
+    /**
+     * Removes the connected registered section that matches both the clicked path type and block material.
+     * Matching the material makes the bulk delete safer at mixed-material intersections.
+     */
+    public static void removeConnected(ServerLevel level, ServerPlayer player, BlockPos clicked) {
+        TownPathSavedData data = TownPathSavedData.get(level);
+        TownPathType seedType = data.typeAt(clicked);
+        if (seedType == null) {
+            player.displayClientMessage(Component.literal("That block is not registered as a Town Path block.")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return;
+        }
+        if (!level.hasChunkAt(clicked)) return;
+
+        Block seedBlock = level.getBlockState(clicked).getBlock();
+        int limit = TownLifeConfig.PATH_BULK_REGISTER_LIMIT.get();
+        Queue<BlockPos> open = new ArrayDeque<>();
+        Set<Long> visited = new HashSet<>();
+        List<BlockPos> connected = new ArrayList<>();
+        open.add(clicked.immutable());
+        visited.add(clicked.asLong());
+
+        while (!open.isEmpty() && connected.size() < limit) {
+            BlockPos pos = open.remove();
+            if (data.typeAt(pos) != seedType || level.getBlockState(pos).getBlock() != seedBlock) continue;
+            connected.add(pos.immutable());
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                BlockPos beside = pos.relative(direction);
+                for (int yOffset : STEP_Y) {
+                    BlockPos candidate = beside.offset(0, yOffset, 0);
+                    long packed = candidate.asLong();
+                    if (!visited.add(packed)) continue;
+                    if (data.typeAt(candidate) == seedType
+                            && level.hasChunkAt(candidate)
+                            && level.getBlockState(candidate).getBlock() == seedBlock) {
+                        open.add(candidate.immutable());
+                    }
+                }
+            }
+        }
+
+        int removed = data.removeAll(connected);
+        boolean truncated = !open.isEmpty();
+        player.displayClientMessage(Component.literal(
+                "Town Path: removed " + removed + " connected " + seedType.displayName()
+                        + " block" + (removed == 1 ? "" : "s")
+                        + (truncated ? " (stopped at safety limit)" : ""))
+                .withStyle(truncated ? ChatFormatting.YELLOW : ChatFormatting.AQUA), true);
+        inspectNearby(level, player);
+    }
+
+    public static void inspectBlock(ServerLevel level, ServerPlayer player, BlockPos clicked) {
+        TownPathSavedData data = TownPathSavedData.get(level);
+        TownPathType type = data.typeAt(clicked);
+        if (type == null) {
+            player.displayClientMessage(Component.literal("This block is not registered as a Town Path.")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return;
+        }
+        player.displayClientMessage(Component.literal(
+                "Town Path: " + type.displayName() + " • " + clicked.toShortString())
+                .withStyle(ChatFormatting.AQUA), true);
+        highlight(level, clicked, type, 8);
+        inspectNearby(level, player);
+    }
+
     public static void inspectNearby(ServerLevel level, ServerPlayer player) {
         TownPathSavedData data = TownPathSavedData.get(level);
         List<BlockPos> nearby = data.nearby(player.blockPosition(), INSPECT_RADIUS, INSPECT_LIMIT);
+        Map<Long, TownPathType> typed = data.typedPositions();
+        int main = 0;
+        int normal = 0;
+        int low = 0;
+        int avoid = 0;
         for (BlockPos pos : nearby) {
-            level.sendParticles(ParticleTypes.END_ROD,
-                    pos.getX() + 0.5D, pos.getY() + 1.08D, pos.getZ() + 0.5D,
-                    1, 0.03D, 0.02D, 0.03D, 0D);
+            TownPathType type = typed.getOrDefault(pos.asLong(), TownPathType.NORMAL);
+            highlight(level, pos, type, 1);
+            switch (type) {
+                case MAIN -> main++;
+                case NORMAL -> normal++;
+                case LOW -> low++;
+                case AVOID -> avoid++;
+            }
         }
         player.displayClientMessage(Component.literal(
-                "Town Paths: " + data.count() + " registered • highlighting " + nearby.size()
-                        + " nearby block" + (nearby.size() == 1 ? "" : "s"))
+                "Town Paths: " + data.count() + " total • nearby M:" + main
+                        + " N:" + normal + " L:" + low + " A:" + avoid)
                 .withStyle(ChatFormatting.AQUA), true);
+    }
+
+    private static void invalidSurface(ServerPlayer player) {
+        player.displayClientMessage(Component.literal(
+                "That block is not a usable path surface; it needs clear walking space above it.")
+                .withStyle(ChatFormatting.RED), true);
+    }
+
+    private static TownPathType safe(TownPathType type) {
+        return type == null ? TownPathType.NORMAL : type;
+    }
+
+    private static void highlight(ServerLevel level, BlockPos pos, TownPathType type, int count) {
+        ParticleOptions particle = switch (safe(type)) {
+            case MAIN -> ParticleTypes.HAPPY_VILLAGER;
+            case NORMAL -> ParticleTypes.END_ROD;
+            case LOW -> ParticleTypes.CRIT;
+            case AVOID -> ParticleTypes.SMOKE;
+        };
+        level.sendParticles(particle,
+                pos.getX() + 0.5D, pos.getY() + 1.08D, pos.getZ() + 0.5D,
+                count, 0.05D, 0.03D, 0.05D, 0D);
     }
 
     private static boolean isWalkableSurface(ServerLevel level, BlockPos pos) {
