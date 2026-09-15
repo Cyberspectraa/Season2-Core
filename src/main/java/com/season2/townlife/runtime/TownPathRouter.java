@@ -1,5 +1,6 @@
 package com.season2.townlife.runtime;
 
+import com.season2.townlife.data.TownPathType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -20,14 +21,24 @@ import net.minecraft.core.Direction;
  */
 public final class TownPathRouter {
     private static final int[] STEP_Y = {0, 1, -1};
+    private static final double MIN_ROUTE_COST = TownPathType.MAIN.routeCost();
 
     private TownPathRouter() {}
 
+    /** Backwards-compatible all-normal route entry point. */
     public static List<BlockPos> route(Set<Long> pathBlocks, BlockPos start, BlockPos destination,
                                        int entryRadius, int waypointSpacing, int maxVisited) {
+        if (pathBlocks == null || pathBlocks.isEmpty()) return List.of();
+        Map<Long, TownPathType> typed = new HashMap<>();
+        for (long packed : pathBlocks) typed.put(packed, TownPathType.NORMAL);
+        return route(typed, start, destination, entryRadius, waypointSpacing, maxVisited);
+    }
+
+    public static List<BlockPos> route(Map<Long, TownPathType> pathBlocks, BlockPos start, BlockPos destination,
+                                       int entryRadius, int waypointSpacing, int maxVisited) {
         if (pathBlocks == null || pathBlocks.size() < 2) return List.of();
-        Optional<Long> startPath = nearest(pathBlocks, start, entryRadius);
-        Optional<Long> endPath = nearest(pathBlocks, destination, entryRadius);
+        Optional<Long> startPath = nearest(pathBlocks.keySet(), start, entryRadius);
+        Optional<Long> endPath = nearest(pathBlocks.keySet(), destination, entryRadius);
         if (startPath.isEmpty() || endPath.isEmpty()) return List.of();
 
         List<BlockPos> raw = findPath(pathBlocks, startPath.get(), endPath.get(), maxVisited);
@@ -57,7 +68,7 @@ public final class TownPathRouter {
         return found ? Optional.of(best) : Optional.empty();
     }
 
-    private static List<BlockPos> findPath(Set<Long> pathBlocks, long start, long goal, int maxVisited) {
+    private static List<BlockPos> findPath(Map<Long, TownPathType> pathBlocks, long start, long goal, int maxVisited) {
         if (start == goal) return List.of(BlockPos.of(start));
 
         PriorityQueue<Node> open = new PriorityQueue<>(Comparator.comparingDouble(Node::fScore));
@@ -65,8 +76,9 @@ public final class TownPathRouter {
         Map<Long, Long> cameFrom = new HashMap<>();
         Set<Long> closed = new HashSet<>();
 
+        BlockPos goalPos = BlockPos.of(goal);
         gScore.put(start, 0D);
-        open.add(new Node(start, heuristic(BlockPos.of(start), BlockPos.of(goal))));
+        open.add(new Node(start, heuristic(BlockPos.of(start), goalPos)));
 
         while (!open.isEmpty() && closed.size() < maxVisited) {
             Node node = open.poll();
@@ -76,14 +88,17 @@ public final class TownPathRouter {
 
             BlockPos currentPos = BlockPos.of(current);
             double currentG = gScore.getOrDefault(current, Double.MAX_VALUE);
-            for (long neighbor : neighbors(pathBlocks, currentPos)) {
+            for (long neighbor : neighbors(pathBlocks.keySet(), currentPos)) {
                 if (closed.contains(neighbor)) continue;
                 BlockPos neighborPos = BlockPos.of(neighbor);
-                double tentative = currentG + 1D + Math.abs(neighborPos.getY() - currentPos.getY()) * 0.35D;
+                TownPathType type = pathBlocks.getOrDefault(neighbor, TownPathType.NORMAL);
+                double stepCost = type.routeCost()
+                        + Math.abs(neighborPos.getY() - currentPos.getY()) * 0.35D;
+                double tentative = currentG + stepCost;
                 if (tentative >= gScore.getOrDefault(neighbor, Double.MAX_VALUE)) continue;
                 cameFrom.put(neighbor, current);
                 gScore.put(neighbor, tentative);
-                double f = tentative + heuristic(neighborPos, BlockPos.of(goal));
+                double f = tentative + heuristic(neighborPos, goalPos);
                 open.add(new Node(neighbor, f));
             }
         }
@@ -103,9 +118,8 @@ public final class TownPathRouter {
     }
 
     private static double heuristic(BlockPos from, BlockPos to) {
-        return Math.abs(from.getX() - to.getX())
-                + Math.abs(from.getZ() - to.getZ())
-                + Math.abs(from.getY() - to.getY()) * 0.25D;
+        return (Math.abs(from.getX() - to.getX()) + Math.abs(from.getZ() - to.getZ())) * MIN_ROUTE_COST
+                + Math.abs(from.getY() - to.getY()) * 0.20D;
     }
 
     private static List<BlockPos> reconstruct(Map<Long, Long> cameFrom, long current) {
