@@ -13,7 +13,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 /** Persistent registered Town Path surface blocks for one dimension. */
 public final class TownPathSavedData extends SavedData {
     private static final String DATA_NAME = "townlife_paths";
-    private static final int DATA_VERSION = 1;
+    private static final int DATA_VERSION = 2;
 
     private final Set<Long> pathBlocks = new LinkedHashSet<>();
     private int revision;
