@@ -4,6 +4,7 @@ import com.season2.townlife.TownLife;
 import com.season2.townlife.command.TownLifeCommands;
 import com.season2.townlife.data.TownLifeSavedData;
 import com.season2.townlife.item.DevClockItem;
+import com.season2.townlife.item.TownWandItem;
 import com.season2.townlife.registry.ModItems;
 import com.season2.townlife.runtime.TownLifeLiteService;
 import com.season2.townlife.runtime.TownLifeManager;
@@ -73,7 +74,8 @@ public final class TownLifeEvents {
         ItemStack held = player.getMainHandItem();
         if (!held.is(ModItems.TOWN_WAND.get()) || !player.hasPermissions(2)) return;
 
-        if (TownLifeLiteService.assignClickedBlock(level, player, held, event.getPos())) {
+        boolean selectingWorkSquare = player.isShiftKeyDown() && TownWandItem.hasSelectedNpc(held);
+        if (TownLifeLiteService.assignClickedBlock(level, player, held, event.getPos()) || selectingWorkSquare) {
             consume(event);
         }
     }

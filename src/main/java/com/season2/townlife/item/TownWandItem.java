@@ -41,7 +41,7 @@ public final class TownWandItem extends Item {
                 TownLifeLiteService.clearSelection(serverPlayer, stack);
             } else if (hasSelectedNpc(stack)) {
                 serverPlayer.displayClientMessage(Component.literal("Selected: " + selectedName(stack)
-                        + " • click a bed or workstation").withStyle(ChatFormatting.AQUA), true);
+                        + " • click a bed/workstation or sneak-click floor for work position").withStyle(ChatFormatting.AQUA), true);
             } else {
                 serverPlayer.displayClientMessage(Component.literal("Right-click an Easy NPC first.")
                         .withStyle(ChatFormatting.YELLOW), true);
@@ -55,6 +55,7 @@ public final class TownWandItem extends Item {
         tooltip.add(Component.literal("Right-click Easy NPC: select + apply Town Resident preset").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Then right-click bed: assign home").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Then right-click workstation: assign job").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Sneak + right-click floor: set/clear work standing square").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.literal("Sneak + right-click air: clear selection").withStyle(ChatFormatting.DARK_GRAY));
         if (hasSelectedNpc(stack)) {
             tooltip.add(Component.literal("Selected: " + selectedName(stack)).withStyle(ChatFormatting.GREEN));

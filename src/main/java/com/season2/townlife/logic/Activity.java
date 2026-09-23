@@ -8,7 +8,8 @@ public enum Activity {
     RELAX,
     WORK,
     SHELTER,
-    RETURN_HOME;
+    RETURN_HOME,
+    BREAK;
 
     public boolean isBasicNeed() {
         return this == EAT || this == SLEEP;

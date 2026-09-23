@@ -1,6 +1,7 @@
 package com.season2.townlife.item;
 
 import com.season2.townlife.data.Resident;
+import com.season2.townlife.logic.BreakSchedule;
 import com.season2.townlife.data.TownLifeSavedData;
 import com.season2.townlife.runtime.EasyNpcCompat;
 import java.util.List;
@@ -56,6 +57,11 @@ public final class DevClockItem extends Item {
         Schedule schedule = schedule(serverLevel, stack);
         Mode selected = mode(stack);
         int target = selected.time(schedule);
+        if (target < 0) {
+            serverPlayer.displayClientMessage(Component.literal("No scheduled break for this short shift.")
+                    .withStyle(ChatFormatting.YELLOW), false);
+            return InteractionResultHolder.success(stack);
+        }
         long current = serverLevel.getDayTime();
         long dayBase = current - Math.floorMod(current, 24000L);
         serverLevel.setDayTime(dayBase + target);
@@ -113,12 +119,15 @@ public final class DevClockItem extends Item {
         tag.putUUID(TAG_RESIDENT, resident.entityUuid());
         tag.putString(TAG_RESIDENT_NAME, resident.identityName());
         player.displayClientMessage(Component.literal("Dev Clock now uses " + resident.identityName() + "'s schedule: "
-                + "work " + formatTime(resident.workStart()) + ", bed " + formatTime(resident.sleepTime()))
+                + "work " + formatTime(resident.workStart()) + "–" + formatTime(resident.workEnd())
+                + ", break " + formatTime(resident.breakStart()) + "–" + formatTime(resident.breakEnd())
+                + ", bed " + formatTime(resident.sleepTime()))
                 .withStyle(ChatFormatting.GREEN), false);
         return true;
     }
 
     public static String formatTime(long dayTime) {
+        if (dayTime < 0) return "not scheduled";
         int ticks = (int) Math.floorMod(dayTime, 24000L);
         int minutesAfterSix = (ticks * 1440) / 24000;
         int totalMinutes = (minutesAfterSix + 360) % 1440;
@@ -133,10 +142,12 @@ public final class DevClockItem extends Item {
             UUID uuid = tag.getUUID(TAG_RESIDENT);
             Resident resident = TownLifeSavedData.get(level).resident(uuid).orElse(null);
             if (resident != null) {
-                return new Schedule(resident.wakeTime(), resident.workStart(), resident.workEnd(), resident.sleepTime());
+                return new Schedule(resident.wakeTime(), resident.workStart(), resident.workEnd(),
+                        resident.breakStart(), resident.breakEnd(), resident.sleepTime());
             }
         }
-        return new Schedule(500, 1800, 9800, 13000);
+        BreakSchedule.Window window = BreakSchedule.defaultFor(1800, 9800);
+        return new Schedule(500, 1800, 9800, window.start(), window.end(), 13000);
     }
 
     private static String scheduleSuffix(ItemStack stack) {
@@ -157,7 +168,8 @@ public final class DevClockItem extends Item {
         stack.getOrCreateTag().putInt(TAG_MODE, mode.ordinal());
     }
 
-    private record Schedule(int wake, int workStart, int workEnd, int sleep) {}
+    private record Schedule(int wake, int workStart, int workEnd,
+                            int breakStart, int breakEnd, int sleep) {}
 
     private enum Mode {
         WORK_START("Work starts") {
@@ -171,6 +183,12 @@ public final class DevClockItem extends Item {
         },
         WAKE_UP("Wake up") {
             @Override int time(Schedule schedule) { return schedule.wake(); }
+        },
+        BREAK_START("Break starts") {
+            @Override int time(Schedule schedule) { return schedule.breakStart(); }
+        },
+        BREAK_END("Break ends") {
+            @Override int time(Schedule schedule) { return schedule.breakEnd(); }
         };
 
         private final String label;
