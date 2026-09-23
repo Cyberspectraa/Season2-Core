@@ -74,10 +74,8 @@ public final class TownLifeEvents {
         ItemStack held = player.getMainHandItem();
         if (!held.is(ModItems.TOWN_WAND.get()) || !player.hasPermissions(2)) return;
 
-        boolean selectingWorkSquare = player.isShiftKeyDown() && TownWandItem.hasSelectedNpc(held);
-        if (TownLifeLiteService.assignClickedBlock(level, player, held, event.getPos()) || selectingWorkSquare) {
-            consume(event);
-        }
+        TownLifeLiteService.assignClickedBlock(level, player, held, event.getPos());
+        consume(event);
     }
 
     private static void consume(PlayerInteractEvent event) {
