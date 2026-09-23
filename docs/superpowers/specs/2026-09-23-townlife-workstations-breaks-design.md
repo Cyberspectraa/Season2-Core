@@ -1,0 +1,16 @@
+# Town Life work positions and scheduled breaks
+
+## Goal
+Give employed Town Life residents an individually selected standing square and a scheduled mid-shift break. Employees stand still while working by default. Existing specialist banker/courier NPCs, homes, road routing, needs, service errands, and bed sleeping remain intact.
+
+## Setup
+Keep the existing Town Wand workstation assignment. Once a Town Life resident has a recognised workstation, select that resident with the Town Wand and sneak-right-click a solid floor block to assign the square immediately above it as their work standing position. Reject blocked/unsafe stand squares, a position already assigned to another resident, or a position too far from the resident's workplace. The new standing position is separate from the workplace workstation block. Sneak-right-click the assigned floor block again to clear it. Unassigned legacy employees continue using the workstation's normal approach square, without destructive migration. The selected square and per-resident break schedule persist in existing Town Life SavedData.
+
+## During work
+Once a work shift begins, route an employee to its designated square using the existing preferred Town Paths and EasyNPC/Minecraft navigation. Only mark the employee arrived after it actually reaches the chosen standing square. Once arrived, cancel local strolling and stay stationary, while preserving player interaction and simple on-the-spot animations. All current jobs default to stationary. A future job-behaviour policy can enable movement-oriented jobs deliberately; do not introduce patrol/roaming logic as part of this release. On a blocked stand square, report the issue and fall back to the existing safe workstation approach rather than teleporting or endlessly retrying.
+
+## Break schedule
+Add a daily BREAK period to employed residents, with a start and end strictly inside the work shift; one break per shift, default around the middle of the work window. In BREAK, residents may leave the work position and travel to their home/food location or remain at a safe break location to replenish hunger, energy and fun. At break end they return to the exact work position before resuming stationary work. During a break service-provider residents are unavailable to customers; pause/cancel ongoing service errands safely. Only emergency shelter, critical survival and player interaction override the break. Work-end and bedtime take priority at boundary conditions. Dev Clock gains Break Starts and Break Ends presets and exposes each bound resident's break schedule.
+
+## Compatibility and verification
+Preserve all preexisting module IDs, block/item registry IDs, SavedData ID townlife, path storage, and existing resident fields. New NBT fields are optional when loading worlds made by earlier versions, with sensible defaults. Do not force-load chunks or implement custom stairs/doors/pathfinding. Validate the behaviour with unit/logic tests where possible and the GitHub Actions Java 17 Forge build; an Actions-generated JAR is the deliverable only when the build succeeds. Do not merge to main automatically.
