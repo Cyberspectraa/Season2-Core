@@ -20,7 +20,11 @@ public final class TownWandItem extends Item {
     public static final String TAG_SELECTED_NAME = "TownLifeSelectedName";
     private static final String TAG_ACTION = "TownLifeWandAction";
 
-    public TownWandItem(Properties properties) { super(properties); }
+    public TownWandItem(Properties properties) {
+        super(properties);
+        // Register even in combined JARs whose TownLife constructor configures the newer Path Wand channel.
+        TownWandNetwork.register();
+    }
 
     @Override
     public boolean isFoil(ItemStack stack) {
