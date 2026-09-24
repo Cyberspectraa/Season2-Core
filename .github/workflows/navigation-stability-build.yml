@@ -1,0 +1,68 @@
+name: Town Life navigation regression build
+on:
+  push:
+    branches: [feature/townlife-workstations-breaks]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+      - name: Verify and apply navigation patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          xz -t scripts/patches/navigation-stability.patch.xz
+          if xz -dc scripts/patches/navigation-stability.patch.xz | git apply --reverse --check - 2>/dev/null; then
+            echo 'Patch already applied to checked-out source.'
+          else
+            xz -dc scripts/patches/navigation-stability.patch.xz | git apply --check -
+            xz -dc scripts/patches/navigation-stability.patch.xz | git apply -
+          fi
+          git diff --check
+      - name: Run dependency-free navigation regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/season2-navigation-test
+          javac --release 17 -d /tmp/season2-navigation-test \
+            src/main/java/com/season2/townlife/logic/ArrivalStability.java \
+            src/main/java/com/season2/townlife/logic/PathRetryPolicy.java \
+            src/main/java/com/season2/townlife/logic/TrapdoorPolicy.java \
+            src/test/java/com/season2/townlife/logic/NavigationStabilityTest.java
+          java -ea -cp /tmp/season2-navigation-test com.season2.townlife.logic.NavigationStabilityTest
+      - name: Verify mappings
+        run: python scripts/check_legacy_srg.py src/main/java
+      - name: Build Forge JAR
+        run: gradle --no-daemon build
+      - name: Commit verified Java sources on feature branch
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/main/java/com/season2/townlife src/test/java/com/season2/townlife/logic/NavigationStabilityTest.java
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix(townlife): stabilise NPC travel and safely handle doorway trapdoors'
+            git push origin HEAD:feature/townlife-workstations-breaks
+          fi
+      - name: Upload compiled Forge JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: season2-navigation-stability-jar
+          if-no-files-found: error
+          retention-days: 30
+          path: build/libs/*.jar
