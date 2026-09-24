@@ -8,6 +8,8 @@ import com.season2.townlife.data.TownLocation;
 import com.season2.townlife.logic.Activity;
 import com.season2.townlife.logic.JobType;
 import com.season2.townlife.logic.NeedType;
+import com.season2.townlife.logic.ArrivalStability;
+import com.season2.townlife.logic.PathRetryPolicy;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -89,6 +91,7 @@ public final class TownLifeManager {
 
     public static void forgetRuntime(UUID uuid) {
         RUNTIME.remove(uuid);
+        TownPathManager.forget(uuid);
         PROVIDER_RESERVATIONS.entrySet().removeIf(entry -> entry.getKey().equals(uuid) || entry.getValue().customer().equals(uuid));
     }
 
@@ -289,14 +292,22 @@ public final class TownLifeManager {
 
         // Being pushed away from an assigned counter should cause a real return commute,
         // not a teleport or a perpetual stationary state away from the counter.
-        if (activity == Activity.WORK && runtime.locationArrived && runtime.finalTarget != null
-                && (runtime.designatedTarget != null
-                    ? !mob.blockPosition().equals(runtime.designatedTarget)
-                    : mob.distanceToSqr(runtime.finalTarget.getX() + 0.5D, runtime.finalTarget.getY(),
-                            runtime.finalTarget.getZ() + 0.5D) > 2.56D)) {
-            runtime.locationArrived = false;
-            runtime.mode = null;
-            runtime.nextPathRefreshTick = 0L;
+        if (activity == Activity.WORK && runtime.locationArrived && runtime.finalTarget != null) {
+            double horizontal = horizontalDistanceSqr(mob, runtime.finalTarget);
+            double vertical = Math.abs(mob.getY() - runtime.finalTarget.getY());
+            boolean displaced = runtime.designatedTarget != null
+                    ? horizontal > 1.21D || vertical > 1.05D
+                    : mob.distanceToSqr(runtime.finalTarget.getX() + 0.5D,
+                            runtime.finalTarget.getY(), runtime.finalTarget.getZ() + 0.5D) > 4.0D;
+            runtime.displacedSeconds = displaced ? runtime.displacedSeconds + 1 : 0;
+            if (runtime.designatedTarget != null
+                    ? ArrivalStability.shouldReturn(horizontal, vertical, runtime.displacedSeconds)
+                    : runtime.displacedSeconds >= 3) {
+                runtime.locationArrived = false;
+                runtime.displacedSeconds = 0;
+                runtime.mode = null;
+                runtime.nextPathRefreshTick = 0L;
+            }
         }
         if (runtime.finalTarget == null) {
             runtime.finalTarget = designatedTarget != null ? designatedTarget : findApproachTarget(
@@ -328,9 +339,8 @@ public final class TownLifeManager {
 
     /**
      * Complete-route movement. Town Life never invents staircase, doorway or
-     * balcony waypoints. Easy NPC owns the movement goal and Minecraft owns the
-     * path. A wider single-path retry is used for commutes beyond Easy NPC's
-     * built-in 48-block Move Back To Home search range.
+     * balcony waypoints. Registered roads guide the road section when active;
+     * otherwise only the native navigator owns the destination's final route.
      */
     private static void followNativeNavigation(ServerLevel level, Resident resident, Mob mob, RuntimeState runtime,
                                                double speed, long gameTime) {
@@ -344,13 +354,25 @@ public final class TownLifeManager {
         }
 
         double distanceSqr = mob.distanceToSqr(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D);
-        boolean atAssignedSquare = runtime.designatedTarget != null && mob.blockPosition().equals(target);
+        boolean atAssignedSquare = runtime.designatedTarget != null
+                && ArrivalStability.isAtWorkSquare(mob.blockPosition().equals(target),
+                        horizontalDistanceSqr(mob, target), Math.abs(mob.getY() - target.getY()));
         if (runtime.designatedTarget != null ? atAssignedSquare : distanceSqr <= 2.56D) {
             runtime.locationArrived = true;
             runtime.lastDistanceSqr = Double.MAX_VALUE;
             runtime.stuckSeconds = 0;
+            runtime.displacedSeconds = 0;
             mob.getNavigation().stop();
             resident.setReason("Arrived at " + readable(resident.activity()));
+            return;
+        }
+
+        // A road waypoint and the final work square cannot control the same navigator simultaneously.
+        if (TownPathManager.isGuiding(resident.entityUuid())) {
+            runtime.lastDistanceSqr = Double.MAX_VALUE;
+            runtime.stuckSeconds = 0;
+            runtime.nextPathRefreshTick = 0L;
+            resident.setReason("Following registered Town Path towards " + readable(resident.activity()));
             return;
         }
 
@@ -362,12 +384,11 @@ public final class TownLifeManager {
 
         // Issue one full Minecraft path immediately, then only refresh if the
         // navigator finishes or the resident has genuinely stopped progressing.
-        boolean shouldIssue = gameTime >= runtime.nextPathRefreshTick
-                && (mob.getNavigation().isDone() || runtime.stuckSeconds >= 3);
-        if (runtime.nextPathRefreshTick == 0L) shouldIssue = true;
+        boolean shouldIssue = PathRetryPolicy.shouldRequest(runtime.nextPathRefreshTick == 0L,
+                gameTime, runtime.nextPathRefreshTick, mob.getNavigation().isDone(), runtime.stuckSeconds);
         if (shouldIssue) {
             EasyNpcCompat.startWidePath(mob, target, speed, NATIVE_PATH_RANGE);
-            runtime.nextPathRefreshTick = gameTime + 60L;
+            runtime.nextPathRefreshTick = gameTime + 100L;
         }
 
         resident.setReason("Commuting to " + readable(resident.activity()) + " using Easy NPC navigation");
@@ -395,6 +416,12 @@ public final class TownLifeManager {
             mob.getNavigation().stop();
             resident.setReason("Easy NPC is retrying the final destination square");
         }
+    }
+
+    private static double horizontalDistanceSqr(Mob mob, BlockPos target) {
+        double dx = mob.getX() - target.getX() - 0.5D;
+        double dz = mob.getZ() - target.getZ() - 0.5D;
+        return dx * dx + dz * dz;
     }
 
     private static void setResidentMode(Mob mob, RuntimeState runtime, ResidentMode mode,
@@ -766,6 +793,7 @@ public final class TownLifeManager {
         private long nextPathRefreshTick;
         private double lastDistanceSqr = Double.MAX_VALUE;
         private int stuckSeconds;
+        private int displacedSeconds;
         private long pausedUntil;
         private boolean sleeping;
         private BlockPos sleepBedPos;
@@ -793,6 +821,7 @@ public final class TownLifeManager {
             nextPathRefreshTick = 0L;
             lastDistanceSqr = Double.MAX_VALUE;
             stuckSeconds = 0;
+            displacedSeconds = 0;
             sleepRetryAt = 0L;
             mode = null;
             modeAnchor = null;

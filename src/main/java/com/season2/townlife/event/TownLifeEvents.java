@@ -9,6 +9,7 @@ import com.season2.townlife.registry.ModItems;
 import com.season2.townlife.runtime.TownLifeLiteService;
 import com.season2.townlife.runtime.TownLifeManager;
 import com.season2.townlife.runtime.TownPathManager;
+import com.season2.townlife.runtime.TownLifeTrapdoorService;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -36,6 +37,7 @@ public final class TownLifeEvents {
         if (event.level instanceof ServerLevel level) {
             TownLifeManager.tick(level);
             TownPathManager.tick(level);
+            TownLifeTrapdoorService.tick(level);
         }
     }
 
