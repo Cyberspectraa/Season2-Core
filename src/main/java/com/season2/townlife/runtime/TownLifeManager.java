@@ -8,6 +8,8 @@ import com.season2.townlife.data.TownLocation;
 import com.season2.townlife.logic.Activity;
 import com.season2.townlife.logic.JobType;
 import com.season2.townlife.logic.NeedType;
+import com.season2.townlife.logic.ArrivalStability;
+import com.season2.townlife.logic.PathRetryPolicy;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -89,6 +91,7 @@ public final class TownLifeManager {
 
     public static void forgetRuntime(UUID uuid) {
         RUNTIME.remove(uuid);
+        TownPathManager.forget(uuid);
         PROVIDER_RESERVATIONS.entrySet().removeIf(entry -> entry.getKey().equals(uuid) || entry.getValue().customer().equals(uuid));
     }
 
@@ -122,6 +125,10 @@ public final class TownLifeManager {
             }
         }
 
+        if (resident.isOnBreak(dayTime) && runtime.serviceRequest != null && !runtime.interacting) {
+            cancelService(resident, mob, runtime, gameTime, "Scheduled work break interrupted the errand");
+        }
+
         if (runtime.interacting) {
             return continueServiceInteraction(level, data, resident, mob, runtime, gameTime);
         }
@@ -130,7 +137,8 @@ public final class TownLifeManager {
         }
 
         // Before normal routine decisions, see whether the resident would visit a working service NPC.
-        if (!resident.isNighttime(dayTime) && gameTime >= runtime.nextServiceRetryTick) {
+        if (!resident.isNighttime(dayTime) && !resident.isOnBreak(dayTime)
+                && gameTime >= runtime.nextServiceRetryTick) {
             ServiceRequest request = neededService(resident, mob);
             if (request != null) {
                 Optional<Provider> provider = findProvider(level, data, town, resident, mob, request, dayTime, gameTime);
@@ -152,6 +160,7 @@ public final class TownLifeManager {
         if (work != null && WorkstationClassifier.classify(level.getBlockState(work.anchor())).isEmpty()) {
             resident.setWorkplaceLocationId("");
             resident.setJobType(JobType.UNEMPLOYED);
+            resident.setWorkPosition(null);
             resident.clearActivity("Assigned workstation no longer exists", gameTime);
             work = null;
         }
@@ -167,8 +176,24 @@ public final class TownLifeManager {
 
         boolean workNow = resident.jobType() != JobType.UNEMPLOYED && work != null
                 && resident.isWorkHours(dayTime) && work.isOpen(dayTime);
+        if (workNow && resident.isOnBreak(dayTime)) {
+            TownLocation breakLocation = home != null ? home : work;
+            beginOrContinueLocation(level, resident, mob, runtime, breakLocation, Activity.BREAK, gameTime, false);
+            if (runtime.locationArrived) {
+                resident.needs().add(NeedType.HUNGER, 0.55F);
+                resident.needs().add(NeedType.ENERGY, 0.32F);
+                resident.needs().add(NeedType.FUN, 0.42F);
+                resident.setReason("On scheduled break; returning to work at break end");
+            }
+            return true;
+        }
         if (workNow) {
-            beginOrContinueLocation(level, resident, mob, runtime, work, Activity.WORK, gameTime, false);
+            BlockPos standing = resident.workPosition();
+            if (standing != null && !WorkPositionService.isStandable(level, standing)) {
+                // Keep the player's saved assignment; fall back safely while temporarily blocked.
+                standing = null;
+            }
+            beginOrContinueLocation(level, resident, mob, runtime, work, Activity.WORK, gameTime, false, standing);
             performWork(resident, mob, runtime, work, gameTime);
             return true;
         }
@@ -247,13 +272,45 @@ public final class TownLifeManager {
 
     private static void beginOrContinueLocation(ServerLevel level, Resident resident, Mob mob, RuntimeState runtime,
                                                 TownLocation location, Activity activity, long gameTime, boolean emergency) {
-        boolean changed = resident.activity() != activity || !resident.targetLocationId().equals(location.id());
+        beginOrContinueLocation(level, resident, mob, runtime, location, activity, gameTime, emergency, null);
+    }
+
+    private static void beginOrContinueLocation(ServerLevel level, Resident resident, Mob mob, RuntimeState runtime,
+                                                TownLocation location, Activity activity, long gameTime, boolean emergency,
+                                                BlockPos designatedTarget) {
+        boolean changed = resident.activity() != activity || !resident.targetLocationId().equals(location.id())
+                || !java.util.Objects.equals(runtime.designatedTarget, designatedTarget);
         if (changed) {
             stopSleeping(mob, runtime);
             resident.beginTravel(activity, location.id(), "Going to " + readable(activity), gameTime);
             runtime.resetMovement();
             runtime.anchor = location.anchor();
-            runtime.finalTarget = findApproachTarget(
+            runtime.designatedTarget = designatedTarget;
+            runtime.finalTarget = designatedTarget != null ? designatedTarget : findApproachTarget(
+                    level, mob, location.anchor(), runtime.random(resident.entityUuid(), gameTime));
+        }
+
+        // Being pushed away from an assigned counter should cause a real return commute,
+        // not a teleport or a perpetual stationary state away from the counter.
+        if (activity == Activity.WORK && runtime.locationArrived && runtime.finalTarget != null) {
+            double horizontal = horizontalDistanceSqr(mob, runtime.finalTarget);
+            double vertical = Math.abs(mob.getY() - runtime.finalTarget.getY());
+            boolean displaced = runtime.designatedTarget != null
+                    ? horizontal > 1.21D || vertical > 1.05D
+                    : mob.distanceToSqr(runtime.finalTarget.getX() + 0.5D,
+                            runtime.finalTarget.getY(), runtime.finalTarget.getZ() + 0.5D) > 4.0D;
+            runtime.displacedSeconds = displaced ? runtime.displacedSeconds + 1 : 0;
+            if (runtime.designatedTarget != null
+                    ? ArrivalStability.shouldReturn(horizontal, vertical, runtime.displacedSeconds)
+                    : runtime.displacedSeconds >= 3) {
+                runtime.locationArrived = false;
+                runtime.displacedSeconds = 0;
+                runtime.mode = null;
+                runtime.nextPathRefreshTick = 0L;
+            }
+        }
+        if (runtime.finalTarget == null) {
+            runtime.finalTarget = designatedTarget != null ? designatedTarget : findApproachTarget(
                     level, mob, location.anchor(), runtime.random(resident.entityUuid(), gameTime));
         }
 
@@ -282,9 +339,8 @@ public final class TownLifeManager {
 
     /**
      * Complete-route movement. Town Life never invents staircase, doorway or
-     * balcony waypoints. Easy NPC owns the movement goal and Minecraft owns the
-     * path. A wider single-path retry is used for commutes beyond Easy NPC's
-     * built-in 48-block Move Back To Home search range.
+     * balcony waypoints. Registered roads guide the road section when active;
+     * otherwise only the native navigator owns the destination's final route.
      */
     private static void followNativeNavigation(ServerLevel level, Resident resident, Mob mob, RuntimeState runtime,
                                                double speed, long gameTime) {
@@ -298,12 +354,25 @@ public final class TownLifeManager {
         }
 
         double distanceSqr = mob.distanceToSqr(target.getX() + 0.5D, target.getY(), target.getZ() + 0.5D);
-        if (distanceSqr <= 2.56D) {
+        boolean atAssignedSquare = runtime.designatedTarget != null
+                && ArrivalStability.isAtWorkSquare(mob.blockPosition().equals(target),
+                        horizontalDistanceSqr(mob, target), Math.abs(mob.getY() - target.getY()));
+        if (runtime.designatedTarget != null ? atAssignedSquare : distanceSqr <= 2.56D) {
             runtime.locationArrived = true;
             runtime.lastDistanceSqr = Double.MAX_VALUE;
             runtime.stuckSeconds = 0;
+            runtime.displacedSeconds = 0;
             mob.getNavigation().stop();
             resident.setReason("Arrived at " + readable(resident.activity()));
+            return;
+        }
+
+        // A road waypoint and the final work square cannot control the same navigator simultaneously.
+        if (TownPathManager.isGuiding(resident.entityUuid())) {
+            runtime.lastDistanceSqr = Double.MAX_VALUE;
+            runtime.stuckSeconds = 0;
+            runtime.nextPathRefreshTick = 0L;
+            resident.setReason("Following registered Town Path towards " + readable(resident.activity()));
             return;
         }
 
@@ -315,12 +384,11 @@ public final class TownLifeManager {
 
         // Issue one full Minecraft path immediately, then only refresh if the
         // navigator finishes or the resident has genuinely stopped progressing.
-        boolean shouldIssue = gameTime >= runtime.nextPathRefreshTick
-                && (mob.getNavigation().isDone() || runtime.stuckSeconds >= 3);
-        if (runtime.nextPathRefreshTick == 0L) shouldIssue = true;
+        boolean shouldIssue = PathRetryPolicy.shouldRequest(runtime.nextPathRefreshTick == 0L,
+                gameTime, runtime.nextPathRefreshTick, mob.getNavigation().isDone(), runtime.stuckSeconds);
         if (shouldIssue) {
             EasyNpcCompat.startWidePath(mob, target, speed, NATIVE_PATH_RANGE);
-            runtime.nextPathRefreshTick = gameTime + 60L;
+            runtime.nextPathRefreshTick = gameTime + 100L;
         }
 
         resident.setReason("Commuting to " + readable(resident.activity()) + " using Easy NPC navigation");
@@ -329,6 +397,14 @@ public final class TownLifeManager {
         // square beside the same bed/workstation. This is not an intermediate
         // route hop and never guesses where stairs or doors are.
         if (runtime.stuckSeconds >= 10) {
+            if (runtime.designatedTarget != null) {
+                // Never silently treat a different floor square as the player's exact assignment.
+                runtime.nextPathRefreshTick = gameTime + 100L;
+                runtime.lastDistanceSqr = Double.MAX_VALUE;
+                runtime.stuckSeconds = 0;
+                resident.setReason("Cannot reach assigned work square; retrying native navigation");
+                return;
+            }
             BlockPos anchor = runtime.anchor == null ? target : runtime.anchor;
             runtime.finalTarget = findApproachTarget(
                     level, mob, anchor, runtime.random(resident.entityUuid(), gameTime + 131L));
@@ -342,6 +418,12 @@ public final class TownLifeManager {
         }
     }
 
+    private static double horizontalDistanceSqr(Mob mob, BlockPos target) {
+        double dx = mob.getX() - target.getX() - 0.5D;
+        double dz = mob.getZ() - target.getZ() - 0.5D;
+        return dx * dx + dz * dz;
+    }
+
     private static void setResidentMode(Mob mob, RuntimeState runtime, ResidentMode mode,
                                         BlockPos anchor, double speed, boolean force) {
         BlockPos immutableAnchor = anchor == null ? null : anchor.immutable();
@@ -353,8 +435,8 @@ public final class TownLifeManager {
 
         switch (mode) {
             case COMMUTING, ERRAND -> EasyNpcCompat.enterTravelState(mob, immutableAnchor, speed);
-            case HOME, WORK -> EasyNpcCompat.enterLocalState(mob, immutableAnchor, speed);
-            case SLEEPING -> EasyNpcCompat.enterStationaryState(mob);
+            case HOME -> EasyNpcCompat.enterLocalState(mob, immutableAnchor, speed);
+            case WORK, SLEEPING -> EasyNpcCompat.enterStationaryState(mob);
         }
         runtime.mode = mode;
         runtime.modeAnchor = immutableAnchor;
@@ -374,7 +456,11 @@ public final class TownLifeManager {
             resident.needs().add(NeedType.SOCIAL, 0.16F);
         }
         resident.needs().add(NeedType.FUN, -0.05F);
-        resident.setReason("Working around workplace • Easy NPC local stroll active");
+        resident.setReason(resident.workPosition() == null
+                ? "Working at workstation approach • stationary"
+                : (runtime.designatedTarget == null
+                        ? "Assigned work square is blocked; working at safe workstation approach"
+                        : "Working at assigned standing square • stationary"));
     }
 
     private static ServiceRequest neededService(Resident resident, Mob mob) {
@@ -404,7 +490,8 @@ public final class TownLifeManager {
             ProviderReservation reservation = PROVIDER_RESERVATIONS.get(provider.entityUuid());
             if (reservation != null && reservation.expiresAt() > gameTime && !reservation.customer().equals(customer.entityUuid())) continue;
             TownLocation workplace = town.location(provider.workplaceLocationId()).orElse(null);
-            if (workplace == null || !provider.isWorkHours(dayTime) || !workplace.isOpen(dayTime)) continue;
+            if (workplace == null || !provider.isWorkHours(dayTime) || provider.isOnBreak(dayTime)
+                    || !workplace.isOpen(dayTime)) continue;
             if (provider.activity() != Activity.WORK || !provider.targetLocationId().equals(workplace.id())) continue;
             Entity entity = level.getEntity(provider.entityUuid());
             if (!(entity instanceof Mob providerMob) || !EasyNpcCompat.isEasyNpc(providerMob)) continue;
@@ -449,7 +536,8 @@ public final class TownLifeManager {
             return true;
         }
         TownLocation workplace = town.location(providerResident.workplaceLocationId()).orElse(null);
-        boolean providerWorking = workplace != null && providerResident.isWorkHours(dayTime) && workplace.isOpen(dayTime)
+        boolean providerWorking = workplace != null && providerResident.isWorkHours(dayTime)
+                && !providerResident.isOnBreak(dayTime) && workplace.isOpen(dayTime)
                 && providerResident.activity() == Activity.WORK;
         if (!providerWorking) {
             cancelService(resident, mob, runtime, gameTime, providerResident.identityName() + " is not working right now");
@@ -700,10 +788,12 @@ public final class TownLifeManager {
     private static final class RuntimeState {
         private BlockPos anchor;
         private BlockPos finalTarget;
+        private BlockPos designatedTarget;
         private boolean locationArrived;
         private long nextPathRefreshTick;
         private double lastDistanceSqr = Double.MAX_VALUE;
         private int stuckSeconds;
+        private int displacedSeconds;
         private long pausedUntil;
         private boolean sleeping;
         private BlockPos sleepBedPos;
@@ -726,10 +816,12 @@ public final class TownLifeManager {
         private void resetMovement() {
             anchor = null;
             finalTarget = null;
+            designatedTarget = null;
             locationArrived = false;
             nextPathRefreshTick = 0L;
             lastDistanceSqr = Double.MAX_VALUE;
             stuckSeconds = 0;
+            displacedSeconds = 0;
             sleepRetryAt = 0L;
             mode = null;
             modeAnchor = null;

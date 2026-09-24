@@ -66,13 +66,13 @@ public final class EasyNpcCompat {
         return changed;
     }
 
-    /** Commute/errand state: the active Easy NPC home becomes the destination. */
+    /** Commute: one Minecraft path owns navigation, not a competing EasyNPC home goal. */
     public static boolean enterTravelState(Mob mob, BlockPos destination, double speed) {
         if (!isEasyNpc(mob) || destination == null) return false;
         mob.getNavigation().stop();
         boolean ok = setHomePosition(mob, destination);
         removeObjective(mob, "RANDOM_STROLL_AROUND_HOME");
-        ok |= ensureObjective(mob, "MOVE_BACK_TO_HOME", speed, 1.6F);
+        removeObjective(mob, "MOVE_BACK_TO_HOME");
         prepareNavigation(mob);
         return ok;
     }

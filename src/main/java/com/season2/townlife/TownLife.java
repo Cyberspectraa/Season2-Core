@@ -2,6 +2,7 @@ package com.season2.townlife;
 
 import com.mojang.logging.LogUtils;
 import com.season2.townlife.config.TownLifeConfig;
+import com.season2.townlife.network.TownWandNetwork;
 import com.season2.townlife.registry.ModItems;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -18,6 +19,7 @@ public final class TownLife {
     public TownLife() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         ModItems.ITEMS.register(modBus);
+        TownWandNetwork.register();
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, TownLifeConfig.SPEC);
         LOGGER.info("Town Life initialized as part of Season2 Core.");
     }

@@ -6,6 +6,7 @@ import com.season2.townlife.data.Town;
 import com.season2.townlife.data.TownLifeSavedData;
 import com.season2.townlife.data.TownLocation;
 import com.season2.townlife.item.TownWandItem;
+import com.season2.townlife.item.TownWandAction;
 import com.season2.townlife.logic.JobType;
 import com.season2.townlife.logic.LocationType;
 import java.util.Comparator;
@@ -15,6 +16,7 @@ import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -23,7 +25,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-/** Simple click-NPC-then-click-block setup used by Town Life Lite. */
+/** Server-side operator setup for residents, with explicit block-action selection. */
 public final class TownLifeLiteService {
     private static final int AUTO_TOWN_RADIUS = 128;
 
@@ -51,7 +53,6 @@ public final class TownLifeLiteService {
                 return false;
             }
             resident = ResidentFactory.create(mob, town);
-            // Lite setup is explicit: selecting a new resident never silently inherits an old area assignment.
             resident.setHomeLocationId("");
             resident.setWorkplaceLocationId("");
             resident.setFavoriteLocationId("");
@@ -59,7 +60,6 @@ public final class TownLifeLiteService {
             data.addResident(resident);
         }
 
-        // 0.4 migration: old marker/area assignments are not valid Lite anchors.
         boolean migrated = false;
         if (!resident.homeLocationId().isBlank() && !resident.homeLocationId().startsWith("home_")) {
             resident.setHomeLocationId("");
@@ -81,7 +81,7 @@ public final class TownLifeLiteService {
         TownWandItem.selectNpc(wand, mob.getUUID(), resident.identityName());
         player.displayClientMessage(Component.literal("Selected " + resident.identityName()
                 + (presetApplied ? " • Town Resident preset applied" : " • Town Resident preset already active")
-                + " • now click a bed or workstation").withStyle(ChatFormatting.GREEN), true);
+                + " • right-click air to configure assignments").withStyle(ChatFormatting.GREEN), true);
         return true;
     }
 
@@ -96,8 +96,7 @@ public final class TownLifeLiteService {
         Resident resident = data.resident(uuid).orElse(null);
         Entity entity = level.getEntity(uuid);
         if (resident == null || !(entity instanceof Mob mob) || !EasyNpcCompat.isEasyNpc(mob)) {
-            TownWandItem.clearSelectedNpc(wand);
-            player.displayClientMessage(Component.literal("That selected NPC is not loaded here anymore.")
+            player.displayClientMessage(Component.literal("Selected NPC is not loaded here; selection preserved. Return when it is loaded.")
                     .withStyle(ChatFormatting.RED), true);
             return false;
         }
@@ -108,21 +107,103 @@ public final class TownLifeLiteService {
             resident.setTownId(town.id());
             data.setDirty();
         }
+        TownWandAction action = TownWandItem.action(wand);
         BlockState state = level.getBlockState(pos);
-
-        if (state.getBlock() instanceof BedBlock) {
-            return assignHome(data, town, resident, player, pos);
+        boolean assigned;
+        switch (action) {
+            case ASSIGN_HOME -> {
+                if (!(state.getBlock() instanceof BedBlock)) {
+                    player.displayClientMessage(Component.literal("Choose a bed for this home assignment.")
+                            .withStyle(ChatFormatting.YELLOW), true);
+                    return false;
+                }
+                assigned = assignHome(data, town, resident, player, pos);
+            }
+            case ASSIGN_WORKPLACE -> {
+                Optional<JobType> job = WorkstationClassifier.classify(state);
+                if (job.isEmpty()) {
+                    player.displayClientMessage(Component.literal("Choose a recognised Town Life workstation.")
+                            .withStyle(ChatFormatting.YELLOW), true);
+                    return false;
+                }
+                assigned = assignWorkplace(data, town, resident, player, pos, job.get());
+            }
+            case ASSIGN_POSITION -> assigned = assignWorkPosition(level, data, town, resident, player, pos);
+            default -> {
+                player.displayClientMessage(Component.literal("Choose an action in the Town Wand menu first.")
+                        .withStyle(ChatFormatting.YELLOW), true);
+                return false;
+            }
         }
+        if (assigned) TownWandItem.setAction(wand, TownWandAction.NONE);
+        return assigned;
+    }
 
-        Optional<JobType> job = WorkstationClassifier.classify(state);
-        if (job.isPresent()) {
-            return assignWorkplace(data, town, resident, player, pos, job.get());
+    /** Menu-only removal; clicking the standing square never removes it. */
+    public static boolean clearWorkPosition(ServerLevel level, ServerPlayer player, ItemStack wand) {
+        UUID uuid = TownWandItem.selectedNpc(wand);
+        Resident resident = uuid == null ? null : TownLifeSavedData.get(level).resident(uuid).orElse(null);
+        if (resident == null) {
+            player.displayClientMessage(Component.literal("Select a Town Life resident first.")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return false;
         }
+        if (resident.workPosition() == null) {
+            player.displayClientMessage(Component.literal("This resident has no work position to clear.")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return false;
+        }
+        resident.setWorkPosition(null);
+        resident.clearActivity("Work standing position cleared in Town Wand menu", level.getGameTime());
+        TownLifeManager.forgetRuntime(resident.entityUuid());
+        TownLifeSavedData.get(level).setDirty();
+        TownWandItem.setAction(wand, TownWandAction.NONE);
+        player.displayClientMessage(Component.literal("Cleared " + resident.identityName() + "'s work position.")
+                .withStyle(ChatFormatting.GREEN), false);
+        return true;
+    }
 
-        player.displayClientMessage(Component.literal("That block is not a recognised Town Life workstation. "
-                + "Use a bed, smithing/anvil/grindstone/blast furnace, composter, smoker, barrel/brewing stand, or bell.")
-                .withStyle(ChatFormatting.YELLOW), false);
-        return false;
+    private static boolean assignWorkPosition(ServerLevel level, TownLifeSavedData data, Town town,
+                                              Resident resident, ServerPlayer player, BlockPos floor) {
+        TownLocation workplace = town.location(resident.workplaceLocationId()).orElse(null);
+        if (resident.jobType() == JobType.UNEMPLOYED || workplace == null) {
+            player.displayClientMessage(Component.literal("Assign this NPC a workstation first.")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return false;
+        }
+        BlockPos feet = floor.above();
+        if (feet.equals(resident.workPosition())) {
+            player.displayClientMessage(Component.literal("This is already the assigned work position; use the menu to clear it.")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return false;
+        }
+        if (workplace.anchor().distSqr(feet) > 256D) {
+            player.displayClientMessage(Component.literal("Work position must be within 16 blocks of the workstation.")
+                    .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        if (!WorkPositionService.isStandable(level, feet)) {
+            player.displayClientMessage(Component.literal("Choose a solid floor block with two clear, dry blocks above it.")
+                    .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        boolean taken = data.residents().stream().anyMatch(other ->
+                !other.entityUuid().equals(resident.entityUuid()) && feet.equals(other.workPosition()));
+        if (taken) {
+            player.displayClientMessage(Component.literal("That standing square is already assigned to another resident.")
+                    .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        resident.setWorkPosition(feet);
+        resident.clearActivity("Work standing position reassigned", level.getGameTime());
+        TownLifeManager.forgetRuntime(resident.entityUuid());
+        data.setDirty();
+        level.sendParticles(ParticleTypes.HAPPY_VILLAGER, feet.getX() + 0.5D, feet.getY() + 0.5D,
+                feet.getZ() + 0.5D, 12, 0.1D, 0.35D, 0.1D, 0.02D);
+        player.displayClientMessage(Component.literal("Set " + resident.identityName()
+                + "'s standing square to " + feet.toShortString() + ".")
+                .withStyle(ChatFormatting.GREEN), false);
+        return true;
     }
 
     public static void clearSelection(ServerPlayer player, ItemStack wand) {
@@ -183,6 +264,7 @@ public final class TownLifeLiteService {
         setDefaultHours(workplace, job);
 
         resident.setJobType(job);
+        if (!id.equals(resident.workplaceLocationId())) resident.setWorkPosition(null);
         resident.setWorkplaceLocationId(id);
         resident.clearActivity("Workplace reassigned", player.serverLevel().getGameTime());
         TownLifeManager.forgetRuntime(resident.entityUuid());

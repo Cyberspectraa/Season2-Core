@@ -1,6 +1,7 @@
 package com.season2.townlife.data;
 
 import com.season2.townlife.logic.Activity;
+import com.season2.townlife.logic.BreakSchedule;
 import com.season2.townlife.logic.DailyFocus;
 import com.season2.townlife.logic.JobType;
 import com.season2.townlife.logic.NeedType;
@@ -9,6 +10,8 @@ import com.season2.townlife.logic.PersonalityTrait;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -24,6 +27,9 @@ public final class Resident {
     private String homeLocationId = "";
     private String workplaceLocationId = "";
     private String favoriteLocationId = "";
+    private BlockPos workPosition;
+    private int breakStart = 5300;
+    private int breakEnd = 6300;
     private int wakeTime = 500;
     private int sleepTime = 13000;
     private int workStart = 1800;
@@ -52,6 +58,9 @@ public final class Resident {
     public String homeLocationId() { return homeLocationId; }
     public String workplaceLocationId() { return workplaceLocationId; }
     public String favoriteLocationId() { return favoriteLocationId; }
+    public BlockPos workPosition() { return workPosition; }
+    public int breakStart() { return breakStart; }
+    public int breakEnd() { return breakEnd; }
     public int wakeTime() { return wakeTime; }
     public int sleepTime() { return sleepTime; }
     public int workStart() { return workStart; }
@@ -72,11 +81,15 @@ public final class Resident {
     public void setHomeLocationId(String id) { this.homeLocationId = normalizeOptional(id); }
     public void setWorkplaceLocationId(String id) { this.workplaceLocationId = normalizeOptional(id); }
     public void setFavoriteLocationId(String id) { this.favoriteLocationId = normalizeOptional(id); }
+    public void setWorkPosition(BlockPos pos) { this.workPosition = pos == null ? null : pos.immutable(); }
     public void setSchedule(int wakeTime, int sleepTime, int workStart, int workEnd) {
         this.wakeTime = Math.floorMod(wakeTime, 24000);
         this.sleepTime = Math.floorMod(sleepTime, 24000);
         this.workStart = Math.floorMod(workStart, 24000);
         this.workEnd = Math.floorMod(workEnd, 24000);
+        BreakSchedule.Window window = BreakSchedule.defaultFor(this.workStart, this.workEnd);
+        this.breakStart = window.start();
+        this.breakEnd = window.end();
     }
     public void setDailyFocus(DailyFocus dailyFocus) { this.dailyFocus = dailyFocus; }
     public void setLastPlannedDay(long lastPlannedDay) { this.lastPlannedDay = lastPlannedDay; }
@@ -109,6 +122,11 @@ public final class Resident {
 
     public boolean isWorkHours(long dayTime) {
         return inWindow(dayTime, workStart, workEnd);
+    }
+
+    public boolean isOnBreak(long dayTime) {
+        return jobType != JobType.UNEMPLOYED && isWorkHours(dayTime)
+                && BreakSchedule.inBreak(dayTime, workStart, workEnd, breakStart, breakEnd);
     }
 
     public boolean isNighttime(long dayTime) {
@@ -144,10 +162,13 @@ public final class Resident {
         tag.putString("Home", homeLocationId);
         tag.putString("Workplace", workplaceLocationId);
         tag.putString("Favorite", favoriteLocationId);
+        if (workPosition != null) tag.put("WorkPosition", NbtUtils.writeBlockPos(workPosition));
         tag.putInt("WakeTime", wakeTime);
         tag.putInt("SleepTime", sleepTime);
         tag.putInt("WorkStart", workStart);
         tag.putInt("WorkEnd", workEnd);
+        tag.putInt("BreakStart", breakStart);
+        tag.putInt("BreakEnd", breakEnd);
         tag.putString("DailyFocus", dailyFocus.name());
         tag.putLong("LastPlannedDay", lastPlannedDay);
         tag.putString("Activity", activity.name());
@@ -182,10 +203,22 @@ public final class Resident {
         resident.homeLocationId = normalizeOptional(tag.getString("Home"));
         resident.workplaceLocationId = normalizeOptional(tag.getString("Workplace"));
         resident.favoriteLocationId = normalizeOptional(tag.getString("Favorite"));
+        if (tag.contains("WorkPosition", Tag.TAG_COMPOUND)) {
+            resident.workPosition = NbtUtils.readBlockPos(tag.getCompound("WorkPosition"));
+        }
         resident.wakeTime = Math.floorMod(tag.getInt("WakeTime"), 24000);
         resident.sleepTime = Math.floorMod(tag.getInt("SleepTime"), 24000);
         resident.workStart = Math.floorMod(tag.getInt("WorkStart"), 24000);
         resident.workEnd = Math.floorMod(tag.getInt("WorkEnd"), 24000);
+        BreakSchedule.Window defaults = BreakSchedule.defaultFor(resident.workStart, resident.workEnd);
+        resident.breakStart = defaults.start();
+        resident.breakEnd = defaults.end();
+        if (tag.contains("BreakStart", Tag.TAG_INT) && tag.contains("BreakEnd", Tag.TAG_INT)
+                && BreakSchedule.valid(resident.workStart, resident.workEnd,
+                        tag.getInt("BreakStart"), tag.getInt("BreakEnd"))) {
+            resident.breakStart = tag.getInt("BreakStart");
+            resident.breakEnd = tag.getInt("BreakEnd");
+        }
         try { resident.dailyFocus = DailyFocus.valueOf(tag.getString("DailyFocus")); }
         catch (IllegalArgumentException ignored) {}
         resident.lastPlannedDay = tag.getLong("LastPlannedDay");

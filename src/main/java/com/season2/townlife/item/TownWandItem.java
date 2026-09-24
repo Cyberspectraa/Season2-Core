@@ -1,6 +1,6 @@
 package com.season2.townlife.item;
 
-import com.season2.townlife.runtime.TownLifeLiteService;
+import com.season2.townlife.network.TownWandNetwork;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nullable;
@@ -18,9 +18,12 @@ import net.minecraft.world.level.Level;
 public final class TownWandItem extends Item {
     public static final String TAG_SELECTED_NPC = "TownLifeSelectedNpc";
     public static final String TAG_SELECTED_NAME = "TownLifeSelectedName";
+    private static final String TAG_ACTION = "TownLifeWandAction";
 
     public TownWandItem(Properties properties) {
         super(properties);
+        // Register even in combined JARs whose TownLife constructor configures the newer Path Wand channel.
+        TownWandNetwork.register();
     }
 
     @Override
@@ -37,15 +40,7 @@ public final class TownWandItem extends Item {
                         .withStyle(ChatFormatting.RED), true);
                 return InteractionResultHolder.fail(stack);
             }
-            if (player.isShiftKeyDown()) {
-                TownLifeLiteService.clearSelection(serverPlayer, stack);
-            } else if (hasSelectedNpc(stack)) {
-                serverPlayer.displayClientMessage(Component.literal("Selected: " + selectedName(stack)
-                        + " • click a bed or workstation").withStyle(ChatFormatting.AQUA), true);
-            } else {
-                serverPlayer.displayClientMessage(Component.literal("Right-click an Easy NPC first.")
-                        .withStyle(ChatFormatting.YELLOW), true);
-            }
+            TownWandNetwork.openConfig(serverPlayer, hand);
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
     }
@@ -53,11 +48,13 @@ public final class TownWandItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.literal("Right-click Easy NPC: select + apply Town Resident preset").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Then right-click bed: assign home").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Then right-click workstation: assign job").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Sneak + right-click air: clear selection").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.literal("Right-click air: open the configuration menu").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Choose an action, then right-click the target block").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Sneaking never clears the selected resident").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Clear selection and position separately in the menu").withStyle(ChatFormatting.DARK_GRAY));
         if (hasSelectedNpc(stack)) {
             tooltip.add(Component.literal("Selected: " + selectedName(stack)).withStyle(ChatFormatting.GREEN));
+            tooltip.add(Component.literal("Action: " + action(stack).label()).withStyle(ChatFormatting.AQUA));
         }
     }
 
@@ -65,6 +62,7 @@ public final class TownWandItem extends Item {
         CompoundTag tag = stack.getOrCreateTag();
         tag.putUUID(TAG_SELECTED_NPC, uuid);
         tag.putString(TAG_SELECTED_NAME, name);
+        setAction(stack, TownWandAction.NONE);
     }
 
     public static boolean hasSelectedNpc(ItemStack stack) {
@@ -84,7 +82,17 @@ public final class TownWandItem extends Item {
         return name.isBlank() ? "Resident" : name;
     }
 
+    public static TownWandAction action(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        return tag == null ? TownWandAction.NONE : TownWandAction.safeName(tag.getString(TAG_ACTION));
+    }
+
+    public static void setAction(ItemStack stack, TownWandAction action) {
+        stack.getOrCreateTag().putString(TAG_ACTION, action.name());
+    }
+
     public static void clearSelectedNpc(ItemStack stack) {
+        setAction(stack, TownWandAction.NONE);
         CompoundTag tag = stack.getTag();
         if (tag == null) return;
         tag.remove(TAG_SELECTED_NPC);

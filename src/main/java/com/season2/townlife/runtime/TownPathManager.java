@@ -7,6 +7,7 @@ import com.season2.townlife.data.TownLifeSavedData;
 import com.season2.townlife.data.TownLocation;
 import com.season2.townlife.data.TownPathSavedData;
 import com.season2.townlife.logic.Activity;
+import com.season2.townlife.logic.PathRetryPolicy;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +37,12 @@ public final class TownPathManager {
     public static void forget(UUID residentUuid) {
         ROUTES.remove(residentUuid);
         SUSPENDED_UNTIL.remove(residentUuid);
+    }
+
+    /** Whether the registered road section, not the final approach, owns navigation. */
+    public static boolean isGuiding(UUID residentUuid) {
+        RouteState state = ROUTES.get(residentUuid);
+        return state != null && state.engaged && !state.completed;
     }
 
     public static void tick(ServerLevel level) {
@@ -125,13 +132,13 @@ public final class TownPathManager {
 
             BlockPos waypoint = state.waypoints.get(state.waypointIndex);
             double speed = TownLifeConfig.WALK_SPEED.get();
-            boolean issueNow = gameTime % 20L == 0L
-                    || gameTime >= state.nextIssueAt
-                    || mob.getNavigation().isDone();
+            boolean issueNow = PathRetryPolicy.shouldRequest(state.nextIssueAt == 0L,
+                    gameTime, state.nextIssueAt, mob.getNavigation().isDone(), 0);
             if (issueNow) {
-                EasyNpcCompat.enterTravelState(mob, waypoint, speed);
+                // Do not cancel a live path or reset goals every second.
+                if (state.nextIssueAt == 0L) EasyNpcCompat.enterTravelState(mob, waypoint, speed);
                 EasyNpcCompat.startWidePath(mob, waypoint, speed, WAYPOINT_NATIVE_RANGE);
-                state.nextIssueAt = gameTime + 20L;
+                state.nextIssueAt = gameTime + 100L;
                 state.engaged = true;
             }
             resident.setReason("Following registered Town Path to " + readable(resident.activity()));
